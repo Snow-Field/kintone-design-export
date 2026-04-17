@@ -31,8 +31,8 @@ const flag = (b: boolean) => (b ? "■" : "□");
 
 export function buildGeneralSheet(data: AppSettings): ExcelData {
   return [
-    ["", "一般情報"],
     [],
+    ["", "項目", "値"],
     ["", "ドメイン", location.hostname],
     ["", "アプリ名", data.app.name],
     ["", "アプリID", data.app.appId],
@@ -113,23 +113,87 @@ export function buildFieldSheet(data: AppSettings): ExcelData {
       ]);
       return;
     }
+    // GROUP/SUBTABLE のヘッダー行を出力
     if (l.type === "GROUP_HEADER" || l.type === "SUBTABLE_HEADER") {
+      const fieldType = l.type === "GROUP_HEADER" ? "GROUP" : "SUBTABLE";
+      rows.push([
+        "",
+        l.code,
+        "",
+        fieldType,
+        idx,
+        l.type === "SUBTABLE_HEADER" ? (l.tableName ?? "") : "",
+        l.type === "GROUP_HEADER" ? (l.groupName ?? "") : "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ]);
       return;
     }
     const f: FieldProperty | undefined = data.fields.properties[l.code];
     if (!f) return;
+
     const spec: string[] = [];
+    // 選択肢の並び
+    if ("align" in f && f.align) {
+      if (f.align === "HORIZONTAL") spec.push("水平");
+      else if (f.align === "VERTICAL") spec.push("垂直");
+    }
+    // 選択肢名
     if ("options" in f && f.options)
       spec.push(`options=[${Object.keys(f.options).join(",")}]`);
+    // 自動計算式
     if ("expression" in f && f.expression)
       spec.push(`expression=${f.expression}`);
+    // 計算フィールドの計算式を非表示にするかどうか
+    if ("hideExpression" in f && f.hideExpression === false)
+      spec.push("計算フィールドの計算式を表示");
+    // 数値の桁区切り
+    if ("digit" in f) {
+      if (f.digit === false) spec.push("桁区切りを非表示");
+      else if (f.digit === true) spec.push("桁区切りを表示");
+    }
+    // 画像のサムネイルの大きさ
+    if ("thumbnailSize" in f && f.thumbnailSize)
+      spec.push(`thumbnailSize=${f.thumbnailSize}`);
+    // リンクの種類
+    if ("protocol" in f && f.protocol) spec.push(String(f.protocol));
+    // 計算フィールドの表示形式
+    if ("format" in f && f.format) spec.push(String(f.format));
+    // 小数点以下の表示桁数
+    if ("displayScale" in f && f.displayScale)
+      spec.push(String(f.displayScale));
+    // 単位記号
+    if ("unit" in f && f.unit) spec.push(`unit=${f.unit}`);
+    // 単位記号の表示位置
+    if ("unitPosition" in f && f.unitPosition)
+      spec.push(`unitPosition=${f.unitPosition}`);
+    // 選択肢のユーザーの一覧
+    if ("entities" in f && f.entities && Array.isArray(f.entities))
+      spec.push(
+        `entities=[${(f.entities as Array<{ code: string; type: string }>).map((e) => e.code).join(",")}]`,
+      );
+    // グループ内のフィールドを表示するかどうか
+    if ("openGroup" in f && f.openGroup === false) spec.push("グループ閉");
+    // 機能が有効かどうか
+    if ("enabled" in f && f.enabled === true) spec.push("有効");
 
     // defaultValue は配列の場合があるため文字列化
     let defaultValueStr = "";
     if ("defaultValue" in f && f.defaultValue) {
       defaultValueStr = Array.isArray(f.defaultValue)
         ? f.defaultValue
-            .map((v) => (typeof v === "object" ? v.code : v))
+            .map((v) =>
+              typeof v === "object" && v !== null && "code" in v
+                ? (v as { code: string }).code
+                : String(v),
+            )
             .join(",")
         : String(f.defaultValue);
     }
@@ -315,7 +379,6 @@ export function buildRecordAclSheet(data: AppSettings): ExcelData {
 export function buildFieldAclSheet(data: AppSettings): ExcelData {
   const rows: ExcelData = [
     [],
-    ["", "", "設定対象", "", "設定内容", "", ""],
     ["", "フィールド", "コード", "種類", "閲覧", "編集", "継承"],
   ];
   data.fieldAcl.rights.forEach((r) => {
@@ -337,11 +400,7 @@ export function buildFieldAclSheet(data: AppSettings): ExcelData {
 }
 
 export function buildProcessSheet(data: AppSettings): ExcelData {
-  const rows: ExcelData = [
-    ["", data.status.enable ? "プロセス管理有効" : "プロセス管理無効"],
-    [],
-    ["", "ステータス名", "作業者", ""],
-  ];
+  const rows: ExcelData = [[], ["", "ステータス名", "作業者", ""]];
   if (data.status.states) {
     Object.values(data.status.states).forEach((s) => {
       rows.push(["", s.name, s.assignee?.type || "", ""]);

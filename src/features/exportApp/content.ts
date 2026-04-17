@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx-js-style";
 import { fetchAllSettings } from "@/api/kintoneClient";
+import { getFormattedDate } from "@/utils/date";
 import { addStyledSheet, saveExcelFile, SHEET_NAMES } from "@/utils/excel";
 import {
   buildGeneralSheet,
@@ -44,7 +45,7 @@ async function exportAppDesign() {
 
     saveExcelFile(
       wb,
-      `${location.hostname.split(".")[0]}-${appId}-design.xlsx`,
+      `${location.hostname.split(".")[0]}-${appId}-${getFormattedDate()}.xlsx`,
     );
     return { success: true };
   } catch (e: unknown) {

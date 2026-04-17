@@ -35,7 +35,7 @@ export const STYLES = {
     },
   },
   TITLE: {
-    font: { name: "ＭＳ Ｐゴシック", sz: 16, bold: true },
+    font: { name: "メイリオ", sz: 16, bold: true },
   },
 };
 
@@ -54,6 +54,20 @@ export const COL_WIDTHS: Record<string, number[]> = {
   [SHEET_NAMES.CALC_INFO]: [13, 150, 120, 500],
 };
 
+/** シートごとのヘッダー行インデックス（0始まり）。複数行ある場合は配列で指定 */
+const HEADER_ROWS: Record<string, number[]> = {
+  [SHEET_NAMES.GENERAL]: [1],
+  [SHEET_NAMES.FIELD]: [1],
+  [SHEET_NAMES.LOOKUP]: [1],
+  [SHEET_NAMES.REFERENCE]: [1],
+  [SHEET_NAMES.VIEW]: [1],
+  [SHEET_NAMES.APP_ACL]: [1],
+  [SHEET_NAMES.RECORD_ACL]: [1],
+  [SHEET_NAMES.FIELD_ACL]: [1],
+  [SHEET_NAMES.PROCESS]: [1],
+  [SHEET_NAMES.CALC_INFO]: [1],
+};
+
 export function addStyledSheet(
   wb: XLSX.WorkBook,
   name: string,
@@ -61,9 +75,10 @@ export function addStyledSheet(
 ) {
   const ws = XLSX.utils.aoa_to_sheet(data);
   const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
+  const headerRows = new Set(HEADER_ROWS[name] ?? [1]);
 
   for (let R = range.s.r; R <= range.e.r; ++R) {
-    const isHeader = R === 1; // 簡易的なヘッダー判定（シートごとに調整可能）
+    const isHeader = headerRows.has(R);
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const addr = XLSX.utils.encode_cell({ r: R, c: C });
       if (!ws[addr] || C === 0) continue;
