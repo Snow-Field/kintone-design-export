@@ -1,5 +1,5 @@
-const pad = (v: number) => {
-  String(v).padStart(2, "0");
+const pad = (num: number) => {
+  return String(num).padStart(2, "0");
 };
 
 export function getFormattedDate() {
