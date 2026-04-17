@@ -70,11 +70,16 @@ const HEADER_ROWS: Record<string, number[]> = {
 /** [一般情報]シート専用のスタイルを適用する */
 function applyGeneralInfoStyle(ws: XLSX.WorkSheet) {
   if (ws["B1"]) {
-    ws["B1"].s = {
-      font: { name: "メイリオ", sz: 16, bold: true },
-    };
+    ws["B1"].s = STYLES.TITLE;
   }
-  for (const cell of ["B3", "B4", "B5", "B6"]) {
+  for (const cell of ["B3", "B4", "B5", "B6", "B7"]) {
+    if (ws[cell]) ws[cell].s = STYLES.HEADER;
+  }
+}
+
+/** [プロセス管理]シート専用のスタイルを適用する */
+function applyProcessStyle(ws: XLSX.WorkSheet) {
+  for (const cell of ["B4", "B5", "C4", "C5", "D4", "D5"]) {
     if (ws[cell]) ws[cell].s = STYLES.HEADER;
   }
 }
@@ -99,6 +104,10 @@ export function addStyledSheet(
 
   if (name === SHEET_NAMES.GENERAL) {
     applyGeneralInfoStyle(ws);
+  }
+
+  if (name === SHEET_NAMES.PROCESS) {
+    applyProcessStyle(ws);
   }
 
   if (COL_WIDTHS[name]) ws["!cols"] = COL_WIDTHS[name].map((w) => ({ wpx: w }));
