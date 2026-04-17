@@ -31,6 +31,7 @@ const flag = (b: boolean) => (b ? "■" : "□");
 
 export function buildGeneralSheet(data: AppSettings): ExcelData {
   return [
+    ["", "一般情報"],
     [],
     ["", "項目", "値"],
     ["", "ドメイン", location.hostname],

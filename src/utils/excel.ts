@@ -15,6 +15,9 @@ export const SHEET_NAMES = {
 } as const;
 
 export const STYLES = {
+  TITLE: {
+    font: { name: "メイリオ", sz: 16, bold: true },
+  },
   HEADER: {
     font: { name: "メイリオ", sz: 11, bold: true },
     fill: { fgColor: { rgb: "33CCCC" } },
@@ -33,9 +36,6 @@ export const STYLES = {
       left: { style: "thin" },
       right: { style: "thin" },
     },
-  },
-  TITLE: {
-    font: { name: "メイリオ", sz: 16, bold: true },
   },
 };
 
@@ -56,7 +56,6 @@ export const COL_WIDTHS: Record<string, number[]> = {
 
 /** シートごとのヘッダー行インデックス（0始まり）。複数行ある場合は配列で指定 */
 const HEADER_ROWS: Record<string, number[]> = {
-  [SHEET_NAMES.GENERAL]: [1],
   [SHEET_NAMES.FIELD]: [1],
   [SHEET_NAMES.LOOKUP]: [1],
   [SHEET_NAMES.REFERENCE]: [1],
@@ -67,6 +66,18 @@ const HEADER_ROWS: Record<string, number[]> = {
   [SHEET_NAMES.PROCESS]: [1],
   [SHEET_NAMES.CALC_INFO]: [1],
 };
+
+/** [一般情報]シート専用のスタイルを適用する */
+function applyGeneralInfoStyle(ws: XLSX.WorkSheet) {
+  if (ws["B1"]) {
+    ws["B1"].s = {
+      font: { name: "メイリオ", sz: 16, bold: true },
+    };
+  }
+  for (const cell of ["B3", "B4", "B5", "B6"]) {
+    if (ws[cell]) ws[cell].s = STYLES.HEADER;
+  }
+}
 
 export function addStyledSheet(
   wb: XLSX.WorkBook,
@@ -80,10 +91,14 @@ export function addStyledSheet(
   for (let R = range.s.r; R <= range.e.r; ++R) {
     const isHeader = headerRows.has(R);
     for (let C = range.s.c; C <= range.e.c; ++C) {
-      const addr = XLSX.utils.encode_cell({ r: R, c: C });
-      if (!ws[addr] || C === 0) continue;
-      ws[addr].s = isHeader ? STYLES.HEADER : STYLES.CELL;
+      const address = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[address] || C === 0) continue;
+      ws[address].s = isHeader ? STYLES.HEADER : STYLES.CELL;
     }
+  }
+
+  if (name === SHEET_NAMES.GENERAL) {
+    applyGeneralInfoStyle(ws);
   }
 
   if (COL_WIDTHS[name]) ws["!cols"] = COL_WIDTHS[name].map((w) => ({ wpx: w }));
