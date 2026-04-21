@@ -4,6 +4,8 @@ import type { ExcelData } from "@/types";
 export const SHEET_NAMES = {
   GENERAL: "一般情報",
   FIELD: "フィールド",
+  CALC: "自動計算情報",
+  ACTION: "アクション情報",
   LOOKUP: "ルックアップ情報",
   REFERENCE: "関連レコード情報",
   VIEW: "一覧",
@@ -11,7 +13,6 @@ export const SHEET_NAMES = {
   RECORD_ACL: "レコードのアクセス権",
   FIELD_ACL: "フィールドのアクセス権",
   PROCESS: "プロセス管理",
-  CALC_INFO: "自動計算情報",
 } as const;
 
 export const STYLES = {
@@ -42,29 +43,17 @@ export const STYLES = {
 export const COL_WIDTHS: Record<string, number[]> = {
   [SHEET_NAMES.GENERAL]: [13, 186, 404],
   [SHEET_NAMES.FIELD]: [
-    13, 140, 193, 168, 59, 101, 101, 61, 61, 61, 61, 61, 61, 61, 245, 485,
+    13, 193, 193, 168, 59, 101, 101, 61, 61, 61, 61, 61, 61, 61, 245, 485,
   ],
+  [SHEET_NAMES.CALC]: [13, 150, 120, 500],
+  [SHEET_NAMES.ACTION]: [13, 145, 142, 53, 142, 175, 449, 245, 405],
   [SHEET_NAMES.LOOKUP]: [13, 142, 166, 175, 173, 449, 165, 165, 165],
   [SHEET_NAMES.REFERENCE]: [13, 204, 166, 175, 165, 165, 165, 165, 165],
   [SHEET_NAMES.VIEW]: [13, 145, 53, 101, 405, 405, 245, 565],
-  [SHEET_NAMES.APP_ACL]: [13, 85, 165, 45, 45, 45, 45, 45, 45, 45, 45],
-  [SHEET_NAMES.RECORD_ACL]: [13, 85, 405, 165, 45, 45, 45, 45],
-  [SHEET_NAMES.FIELD_ACL]: [13, 165, 149, 149, 44, 44, 44],
+  [SHEET_NAMES.APP_ACL]: [13, 145, 165, 45, 45, 45, 45, 45, 45, 45, 45],
+  [SHEET_NAMES.RECORD_ACL]: [13, 145, 405, 165, 45, 45, 45, 45],
+  [SHEET_NAMES.FIELD_ACL]: [13, 165, 145, 145, 44, 44, 44],
   [SHEET_NAMES.PROCESS]: [13, 165, 205, 205],
-  [SHEET_NAMES.CALC_INFO]: [13, 150, 120, 500],
-};
-
-/** シートごとのヘッダー行インデックス（0始まり）。複数行ある場合は配列で指定 */
-const HEADER_ROWS: Record<string, number[]> = {
-  [SHEET_NAMES.FIELD]: [1],
-  [SHEET_NAMES.LOOKUP]: [1],
-  [SHEET_NAMES.REFERENCE]: [1],
-  [SHEET_NAMES.VIEW]: [1],
-  [SHEET_NAMES.APP_ACL]: [1],
-  [SHEET_NAMES.RECORD_ACL]: [1],
-  [SHEET_NAMES.FIELD_ACL]: [1],
-  [SHEET_NAMES.PROCESS]: [1],
-  [SHEET_NAMES.CALC_INFO]: [1],
 };
 
 /** [一般情報]シート専用のスタイルを適用する */
@@ -77,24 +66,17 @@ function applyGeneralInfoStyle(ws: XLSX.WorkSheet) {
   }
 }
 
-/** [プロセス管理]シート専用のスタイルを適用する */
-function applyProcessStyle(ws: XLSX.WorkSheet) {
-  for (const cell of ["B4", "B5", "C4", "C5", "D4", "D5"]) {
-    if (ws[cell]) ws[cell].s = STYLES.HEADER;
-  }
-}
-
 export function addStyledSheet(
   wb: XLSX.WorkBook,
   name: string,
-  data: ExcelData,
+  { rows, headerIndex }: { rows: ExcelData; headerIndex: number[] },
 ) {
-  const ws = XLSX.utils.aoa_to_sheet(data);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
   const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
-  const headerRows = new Set(HEADER_ROWS[name] ?? [1]);
+  const headerIndexSet = new Set([...(headerIndex ?? [1])]);
 
   for (let R = range.s.r; R <= range.e.r; ++R) {
-    const isHeader = headerRows.has(R);
+    const isHeader = headerIndexSet.has(R);
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const address = XLSX.utils.encode_cell({ r: R, c: C });
       if (!ws[address] || C === 0) continue;
@@ -104,10 +86,6 @@ export function addStyledSheet(
 
   if (name === SHEET_NAMES.GENERAL) {
     applyGeneralInfoStyle(ws);
-  }
-
-  if (name === SHEET_NAMES.PROCESS) {
-    applyProcessStyle(ws);
   }
 
   if (COL_WIDTHS[name]) ws["!cols"] = COL_WIDTHS[name].map((w) => ({ wpx: w }));

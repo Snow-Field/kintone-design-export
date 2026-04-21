@@ -1,7 +1,7 @@
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 import type { AppSettings, AppStatusResponse } from "../types";
 
-const client = new KintoneRestAPIClient({});
+const client = new KintoneRestAPIClient();
 
 // プロセス管理をfetchで取得する関数
 async function fetchAppStatus(appId: string): Promise<AppStatusResponse> {
@@ -18,17 +18,37 @@ async function fetchAppStatus(appId: string): Promise<AppStatusResponse> {
 export async function fetchAllSettings(appId: string): Promise<AppSettings> {
   const p = { app: appId };
 
-  const [app, fields, layout, views, appAcl, recordAcl, fieldAcl, status] =
-    await Promise.all([
-      client.app.getApp({ id: appId }),
-      client.app.getFormFields(p),
-      client.app.getFormLayout(p),
-      client.app.getViews(p),
-      client.app.getAppAcl(p),
-      client.app.getRecordAcl(p),
-      client.app.getFieldAcl(p),
-      fetchAppStatus(appId),
-    ]);
+  const [
+    app,
+    fields,
+    layout,
+    actions,
+    views,
+    appAcl,
+    recordAcl,
+    fieldAcl,
+    status,
+  ] = await Promise.all([
+    client.app.getApp({ id: appId }),
+    client.app.getFormFields(p),
+    client.app.getFormLayout(p),
+    client.app.getAppActions(p),
+    client.app.getViews(p),
+    client.app.getAppAcl(p),
+    client.app.getRecordAcl(p),
+    client.app.getFieldAcl(p),
+    fetchAppStatus(appId),
+  ]);
 
-  return { app, fields, layout, views, appAcl, recordAcl, fieldAcl, status };
+  return {
+    app,
+    fields,
+    layout,
+    actions,
+    views,
+    appAcl,
+    recordAcl,
+    fieldAcl,
+    status,
+  };
 }
