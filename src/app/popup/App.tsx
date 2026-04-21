@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   FileSpreadsheet,
   Loader2,
@@ -6,11 +6,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getErrorMessage } from "@/utils/error";
 import "@/index.css";
 
 type StatusType = "idle" | "loading" | "success" | "error";
 
-const App: React.FC = () => {
+export const App = () => {
   const [status, setStatus] = useState<StatusType>("idle");
   const [message, setMessage] = useState<string>("");
 
@@ -25,23 +26,19 @@ const App: React.FC = () => {
       });
       if (!tab.id) throw new Error("タブが見つかりません");
 
-      const response = await chrome.tabs.sendMessage(tab.id, {
+      await chrome.tabs.sendMessage(tab.id, {
         action: "START_EXPORT",
       });
-
-      if (chrome.runtime.lastError) {
-        setStatus("error");
-        setMessage("Kintoneのページで実行してください");
-      } else if (response?.success) {
-        setStatus("success");
-        setMessage("出力が完了しました");
-      } else {
-        setStatus("error");
-        setMessage(response?.message || "不明なエラー");
-      }
     } catch (e: unknown) {
       setStatus("error");
-      setMessage(e instanceof Error ? e.message : "不明なエラーが発生しました");
+      if (
+        e instanceof Error &&
+        e.message.includes("Could not establish connection")
+      ) {
+        setMessage("kintoneのページで実行してください");
+      } else {
+        setMessage(getErrorMessage(e));
+      }
     }
   };
 
@@ -95,5 +92,3 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-export default App;
