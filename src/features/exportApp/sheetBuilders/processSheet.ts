@@ -20,11 +20,13 @@ export function buildProcessSheet(data: AppSettings): SheetResult {
   }
 
   rows.push([]);
+  const actionHeaderRow = rows.length;
   rows.push(["", "アクション", "実行前ステータス", "実行後ステータス"]);
-  headerIndex.push(rows.length);
+  headerIndex.push(actionHeaderRow);
 
+  const condHeaderRow = rows.length;
   rows.push(["", "", "条件", ""]);
-  headerIndex.push(rows.length);
+  headerIndex.push(condHeaderRow);
 
   if (data.status.actions) {
     data.status.actions.forEach((a) =>

@@ -26,9 +26,17 @@ export const App = () => {
       });
       if (!tab.id) throw new Error("タブが見つかりません");
 
-      await chrome.tabs.sendMessage(tab.id, {
+      const response = await chrome.tabs.sendMessage(tab.id, {
         action: "START_EXPORT",
       });
+
+      if (response?.success) {
+        setStatus("success");
+        setMessage("出力が完了しました");
+      } else {
+        setStatus("error");
+        setMessage(response?.message || "不明なエラー");
+      }
     } catch (e: unknown) {
       setStatus("error");
       if (
