@@ -136,9 +136,15 @@ export function buildFieldSheet(data: AppSettings): SheetResult {
       else if (align === "VERTICAL") spec.push("垂直");
     }
     // 選択肢名
-    const options = getFieldProp(f, "options");
-    if (options)
-      spec.push(`options=[${Object.keys(options as object).join(",")}]`);
+    const options = getFieldProp(f, "options") as
+      | Record<string, { label: string; index: string }>
+      | undefined;
+    if (options) {
+      const sortedOptionNames = Object.values(options)
+        .toSorted((a, b) => Number(a.index) - Number(b.index))
+        .map((opt) => opt.label);
+      spec.push(`options=[${sortedOptionNames.join(",")}]`);
+    }
     // 自動計算式
     const expression = getFieldProp(f, "expression");
     if (expression) spec.push(`expression=${expression}`);
