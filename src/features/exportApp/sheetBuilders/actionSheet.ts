@@ -22,7 +22,7 @@ export function buildActionSheet(data: AppSettings): SheetResult {
         m.srcType === "FIELD" ? `${m.srcField}->${m.destField}` : "",
       )
       .join(",");
-    const entities = a.entities.map((e) => `${e.code}/${e.type}`).join("\n");
+    const entities = a.entities.map((e) => `${e.code}／${e.type}`).join("\n");
     rows.push([
       "",
       a.name,
