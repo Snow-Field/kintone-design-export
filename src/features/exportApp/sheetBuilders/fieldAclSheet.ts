@@ -1,27 +1,30 @@
-import type { ExcelData, SheetResult, AppSettings } from '@/types';
+import type { ColumnDef, ExcelData, SheetResult, AppSettings } from '@/types';
+import { checkMark } from '@/utils/format';
 
-const flag = (b: boolean) => (b ? '■' : '□');
+const COLUMNS: ColumnDef[] = [
+  { group: '対象フィールド', header: 'フィールドコード', width: 26 },
+  { group: '対象', header: 'コード', width: 24 },
+  { group: '対象', header: '種類', width: 16 },
+  { group: '対象', header: '下位組織にも適用', width: 15 },
+  { group: '権限', header: '閲覧', width: 7 },
+  { group: '権限', header: '編集', width: 7 },
+];
 
 export function buildFieldAclSheet(data: AppSettings): SheetResult {
-  const rows: ExcelData = [
-    [],
-    ['', 'フィールド', 'コード', '種類', '閲覧', '編集', '継承'],
-  ];
+  const rows: ExcelData = [];
 
-  data.fieldAcl.rights.forEach((r) => {
-    r.entities.forEach((e) => {
-      const view = e.accessibility !== 'NONE' ? '■' : '□';
-      const edit = e.accessibility === 'WRITE' ? '■' : '□';
+  data.fieldAcl.rights.forEach((right) => {
+    right.entities.forEach((entity) => {
       rows.push([
-        '',
-        r.code,
-        e.entity.code,
-        e.entity.type,
-        view,
-        edit,
-        flag(e.includeSubs),
+        right.code,
+        entity.entity.code,
+        entity.entity.type,
+        checkMark(entity.includeSubs),
+        checkMark(entity.accessibility !== 'NONE'),
+        checkMark(entity.accessibility === 'WRITE'),
       ]);
     });
   });
-  return { rows, headerIndex: [1] };
+
+  return { blocks: [{ columns: COLUMNS, rows }] };
 }

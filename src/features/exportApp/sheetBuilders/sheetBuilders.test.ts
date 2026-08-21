@@ -4,11 +4,10 @@ import {
   createMockAppSettings,
 } from '@/test/fixtures/appSettings';
 import { SHEET_NAMES } from '@/utils/excel';
-import type { AppSettings, SheetResult } from '@/types';
+import type { AppSettings, SheetBlock, SheetResult } from '@/types';
 import {
   buildGeneralSheet,
   buildFieldSheet,
-  buildCalcSheet,
   buildActionSheet,
   buildLookupSheet,
   buildReferenceSheet,
@@ -31,7 +30,6 @@ beforeAll(() => {
 const builders: Array<[string, (data: AppSettings) => SheetResult]> = [
   [SHEET_NAMES.GENERAL, buildGeneralSheet],
   [SHEET_NAMES.FIELD, buildFieldSheet],
-  [SHEET_NAMES.CALC, buildCalcSheet],
   [SHEET_NAMES.ACTION, buildActionSheet],
   [SHEET_NAMES.LOOKUP, buildLookupSheet],
   [SHEET_NAMES.REFERENCE, buildReferenceSheet],
@@ -42,6 +40,20 @@ const builders: Array<[string, (data: AppSettings) => SheetResult]> = [
   [SHEET_NAMES.PROCESS, buildProcessSheet],
 ];
 
+/** 先頭の表。ほとんどのシートは表を1つだけ持つ */
+function firstBlock(result: SheetResult): SheetBlock {
+  const block = result.blocks[0];
+  if (!block) throw new Error('表が1つも無い');
+  return block;
+}
+
+/** 指定した見出しの列に入っている値を取り出す */
+function column(block: SheetBlock, header: string): unknown[] {
+  const index = block.columns.findIndex((c) => c.header === header);
+  if (index < 0) throw new Error(`列が見つからない: ${header}`);
+  return block.rows.map((row) => row[index]);
+}
+
 describe.each(builders)('%s シート', (_name, build) => {
   it('標準構成の出力が変化しない', () => {
     expect(build(createMockAppSettings())).toMatchSnapshot();
@@ -51,182 +63,250 @@ describe.each(builders)('%s シート', (_name, build) => {
     expect(() => build(createMinimalAppSettings())).not.toThrow();
   });
 
-  it('行データの先頭列は常に空である', () => {
-    const { rows } = build(createMockAppSettings());
-    for (const row of rows) {
-      if (row.length > 0) expect(row[0]).toBe('');
+  it('少なくとも1つの表を持つ', () => {
+    expect(build(createMockAppSettings()).blocks.length).toBeGreaterThan(0);
+  });
+
+  it('各列に見出しと幅が定義されている', () => {
+    for (const block of build(createMockAppSettings()).blocks) {
+      expect(block.columns.length).toBeGreaterThan(0);
+      for (const col of block.columns) {
+        expect(col.header).not.toBe('');
+        expect(col.width).toBeGreaterThan(0);
+      }
     }
   });
 
-  it('ヘッダー行の索引が実在する行を指している', () => {
-    const { rows, headerIndex } = build(createMockAppSettings());
-    for (const index of headerIndex) {
-      expect(index).toBeLessThan(rows.length);
+  it('行の要素数が列数を超えない', () => {
+    for (const block of build(createMockAppSettings()).blocks) {
+      for (const row of block.rows) {
+        expect(row.length).toBeLessThanOrEqual(block.columns.length);
+      }
     }
   });
 });
 
 describe('buildGeneralSheet', () => {
   it('ドメインに location.hostname を出力する', () => {
-    const { rows } = buildGeneralSheet(createMockAppSettings());
-    expect(rows).toContainEqual(['', 'ドメイン', 'example.cybozu.com']);
+    const block = firstBlock(buildGeneralSheet(createMockAppSettings()));
+    expect(block.rows).toContainEqual(['ドメイン', 'example.cybozu.com']);
   });
 });
 
 describe('buildFieldSheet', () => {
-  it('選択肢を index の昇順で並べる', () => {
-    const { rows } = buildFieldSheet(createMockAppSettings());
-    const row = rows.find((r) => r[1] === 'ステータス種別');
-    expect(row?.at(-1)).toContain('options=[進行中,保留,完了]');
+  const block = () => firstBlock(buildFieldSheet(createMockAppSettings()));
+  const rowOf = (code: string) =>
+    block().rows.find((row) => row[1] === code) ?? [];
+  const valueOf = (code: string, header: string) => {
+    const b = block();
+    const index = b.columns.findIndex((c) => c.header === header);
+    return rowOf(code)[index];
+  };
+
+  it('選択肢を index の昇順でカンマ区切りにする', () => {
+    expect(valueOf('ステータス種別', '選択肢')).toBe('進行中,保留,完了');
   });
 
-  it('必須・重複禁止の設定を日本語表記に変換する', () => {
-    const { rows } = buildFieldSheet(createMockAppSettings());
-    const row = rows.find((r) => r[1] === '案件名');
-    expect(row?.[8]).toBe('必須');
-    expect(row?.[9]).toBe('禁止');
+  it('選択肢の並びを API の値のまま出力する', () => {
+    expect(valueOf('ステータス種別', '選択肢の並び')).toBe('HORIZONTAL');
   });
 
-  it('noLabel が true のフィールドを非表示と出力する', () => {
-    const { rows } = buildFieldSheet(createMockAppSettings());
-    expect(rows.find((r) => r[1] === '備考')?.[7]).toBe('非表示');
+  it('フィールド型を API の値のまま出力する', () => {
+    expect(valueOf('案件名', 'タイプ')).toBe('SINGLE_LINE_TEXT');
   });
 
-  it('配列のデフォルト値をコードの連結に変換する', () => {
-    const { rows } = buildFieldSheet(createMockAppSettings());
-    expect(rows.find((r) => r[1] === '担当者')?.[14]).toBe('user1');
+  it('必須と重複禁止を日本語表記にする', () => {
+    expect(valueOf('案件名', '必須')).toBe('必須');
+    expect(valueOf('案件名', '重複禁止')).toBe('禁止');
+  });
+
+  it('計算式を専用の列に出力する', () => {
+    expect(valueOf('税込金額', '計算式')).toBe('金額 * 1.1');
+    expect(valueOf('案件名', '計算式')).toBe('');
+  });
+
+  it('単位と単位の位置を分けて出力する', () => {
+    expect(valueOf('金額', '単位')).toBe('円');
+    expect(valueOf('金額', '単位の位置')).toBe('AFTER');
+  });
+
+  it('真偽値の属性をチェック記号で表す', () => {
+    expect(valueOf('金額', '桁区切り')).toBe('■');
+    expect(valueOf('数量', '桁区切り')).toBe('□');
+    expect(valueOf('備考', 'ラベル表示')).toBe('□');
+    expect(valueOf('案件名', 'ラベル表示')).toBe('■');
+  });
+
+  it('未設定の真偽値は空欄にする', () => {
+    expect(valueOf('案件名', '桁区切り')).toBe('');
+  });
+
+  it('対象ユーザーをカンマ区切りにする', () => {
+    expect(valueOf('担当者', '対象ユーザー')).toBe('sales,user1');
+  });
+
+  it('配列のデフォルト値をコードの連結にする', () => {
+    expect(valueOf('担当者', 'デフォルト値')).toBe('user1');
+  });
+
+  it('サブテーブル内のフィールドをテーブル名付きで出力する', () => {
+    expect(valueOf('商品名', 'テーブル')).toBe('明細');
+    expect(valueOf('数量', 'タイプ')).toBe('NUMBER');
+  });
+
+  it('グループ内フィールドにグループ名を付ける', () => {
+    expect(valueOf('社内メモ', 'グループ')).toBe('社内情報');
   });
 
   it('GROUP と SUBTABLE の見出し行を出力する', () => {
-    const { rows } = buildFieldSheet(createMockAppSettings());
-    expect(rows.find((r) => r[1] === '社内情報')?.[3]).toBe('GROUP');
-    expect(rows.find((r) => r[1] === '明細')?.[3]).toBe('SUBTABLE');
-  });
-
-  it('グループ内フィールドにグループ名を付与する', () => {
-    const { rows } = buildFieldSheet(createMockAppSettings());
-    expect(rows.find((r) => r[1] === '社内メモ')?.[6]).toBe('社内情報');
+    expect(valueOf('社内情報', 'タイプ')).toBe('GROUP');
+    expect(valueOf('明細', 'タイプ')).toBe('SUBTABLE');
   });
 
   it('LABEL・SPACER・HR を種別付きで出力する', () => {
-    const { rows } = buildFieldSheet(createMockAppSettings());
-    const types = rows.map((r) => r[3]);
+    const types = column(block(), 'タイプ');
     expect(types).toContain('LABEL');
     expect(types).toContain('SPACER');
     expect(types).toContain('HR');
   });
-
-  it('サブテーブル内のフィールドをテーブル名付きで出力する', () => {
-    // kintone の getFormFields は明細内フィールドを properties 直下ではなく
-    // サブテーブルの fields 配下に返すため、そちらから解決する必要がある。
-    const { rows } = buildFieldSheet(createMockAppSettings());
-
-    const 商品名 = rows.find((r) => r[1] === '商品名');
-    expect(商品名?.[2]).toBe('商品名');
-    expect(商品名?.[3]).toBe('SINGLE_LINE_TEXT');
-    expect(商品名?.[5]).toBe('明細');
-    expect(商品名?.[8]).toBe('必須');
-
-    const 数量 = rows.find((r) => r[1] === '数量');
-    expect(数量?.[3]).toBe('NUMBER');
-    expect(数量?.[5]).toBe('明細');
-    expect(数量?.[14]).toBe('1');
-  });
-
-  it('サブテーブルの見出し行と明細内フィールドを重複させない', () => {
-    const { rows } = buildFieldSheet(createMockAppSettings());
-    const 明細行 = rows.filter((r) => r[1] === '明細');
-    expect(明細行).toHaveLength(1);
-    expect(明細行[0]?.[3]).toBe('SUBTABLE');
-  });
-});
-
-describe('buildCalcSheet', () => {
-  it('計算式を持つフィールドだけを抽出する', () => {
-    const { rows } = buildCalcSheet(createMockAppSettings());
-    const codes = rows.slice(2).map((r) => r[2]);
-    expect(codes).toEqual(['税込金額']);
-  });
-});
-
-describe('buildViewSheet', () => {
-  it('一覧を index の昇順で並べる', () => {
-    const { rows } = buildViewSheet(createMockAppSettings());
-    expect(rows.slice(2).map((r) => r[1])).toEqual(['一覧', 'カレンダー']);
-  });
-
-  it('fields を持たない一覧種別では表示フィールドを空にする', () => {
-    const { rows } = buildViewSheet(createMockAppSettings());
-    expect(rows.find((r) => r[1] === 'カレンダー')?.[4]).toBe('');
-  });
 });
 
 describe('buildLookupSheet', () => {
-  it('ルックアップ設定を持つフィールドだけを抽出する', () => {
-    const { rows } = buildLookupSheet(createMockAppSettings());
-    expect(rows.slice(2).map((r) => r[1])).toEqual(['顧客名']);
+  const block = () => firstBlock(buildLookupSheet(createMockAppSettings()));
+
+  it('コピー元とコピー先を別々の列に展開する', () => {
+    const rows = block().rows.filter(
+      (row) => row[4] === 'ほかのフィールドのコピー',
+    );
+    expect(rows.map((row) => [row[5], row[6]])).toEqual([
+      ['顧客住所', '住所'],
+      ['顧客電話番号', '電話番号'],
+    ]);
   });
 
-  it('フィールドマッピングを矢印表記で連結する', () => {
-    const { rows } = buildLookupSheet(createMockAppSettings());
-    expect(rows.find((r) => r[1] === '顧客名')?.[5]).toBe(
-      '顧客住所->住所,顧客電話番号->電話番号',
-    );
+  it('表示フィールドを1件ずつ行に展開する', () => {
+    const rows = block().rows.filter((row) => row[4] === '表示フィールド');
+    expect(rows.map((row) => row[6])).toEqual(['顧客コード', '顧客名']);
+  });
+
+  it('どの行にもルックアップ元の情報が入る', () => {
+    for (const value of column(block(), 'コピー元アプリコード')) {
+      expect(value).toBe('CUSTOMER');
+    }
   });
 });
 
 describe('buildReferenceSheet', () => {
-  it('関連レコード設定を持つフィールドだけを抽出する', () => {
-    const { rows } = buildReferenceSheet(createMockAppSettings());
-    expect(rows.slice(2).map((r) => r[1])).toEqual(['関連案件']);
+  it('表示フィールドを1件ずつ行に展開する', () => {
+    const block = firstBlock(buildReferenceSheet(createMockAppSettings()));
+    expect(block.rows.map((row) => row[5])).toEqual(['案件名', '金額']);
+  });
+});
+
+describe('buildViewSheet', () => {
+  const block = () => firstBlock(buildViewSheet(createMockAppSettings()));
+
+  it('一覧を index の昇順で並べる', () => {
+    expect([...new Set(column(block(), '一覧名'))]).toEqual([
+      '一覧',
+      'カレンダー',
+    ]);
+  });
+
+  it('表示フィールドを1件ずつ行に展開する', () => {
+    const rows = block().rows.filter((row) => row[0] === '一覧');
+    expect(rows.map((row) => row[4])).toEqual([
+      '案件名',
+      '金額',
+      'ステータス種別',
+    ]);
+  });
+
+  it('表示フィールドを持たない一覧種別でも1行は出力する', () => {
+    const rows = block().rows.filter((row) => row[0] === 'カレンダー');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.[4]).toBe('');
   });
 });
 
 describe('buildActionSheet', () => {
-  it('FIELD 以外のマッピング種別は空文字として連結する', () => {
-    const { rows } = buildActionSheet(createMockAppSettings());
-    expect(rows.find((r) => r[1] === '請求書作成')?.[6]).toBe(
-      '案件名->案件名,',
-    );
+  const block = () => firstBlock(buildActionSheet(createMockAppSettings()));
+
+  it('関連付けと利用者を行数の多い方に合わせて展開する', () => {
+    expect(block().rows).toHaveLength(2);
   });
 
-  it('利用者を全角スラッシュ区切りで出力する', () => {
-    const { rows } = buildActionSheet(createMockAppSettings());
-    expect(rows.find((r) => r[1] === '請求書作成')?.[7]).toBe(
-      'sales／GROUP\nuser1／USER',
-    );
+  it('関連付けの種別とコピー元・コピー先を列に分ける', () => {
+    expect(block().rows.map((row) => [row[5], row[6], row[7]])).toEqual([
+      ['FIELD', '案件名', '案件名'],
+      ['RECORD_URL', '', '参照元'],
+    ]);
+  });
+
+  it('利用者のコードと種類を列に分ける', () => {
+    expect(block().rows.map((row) => [row[8], row[9]])).toEqual([
+      ['sales', 'GROUP'],
+      ['user1', 'USER'],
+    ]);
   });
 });
 
 describe('buildAppAclSheet', () => {
-  it('権限の有無を ■ と □ で表す', () => {
-    const { rows } = buildAppAclSheet(createMockAppSettings());
-    const row = rows.find((r) => r[1] === 'everyone');
-    expect(row?.slice(3)).toEqual(['■', '■', '■', '□', '□', '□', '□', '■']);
+  it('権限の有無をチェック記号で表す', () => {
+    const block = firstBlock(buildAppAclSheet(createMockAppSettings()));
+    const row = block.rows.find((r) => r[0] === 'everyone');
+    expect(row?.slice(2)).toEqual(['■', '■', '■', '■', '□', '□', '□', '□']);
   });
 });
 
 describe('buildFieldAclSheet', () => {
-  it('accessibility を閲覧・編集の可否に展開する', () => {
-    const { rows } = buildFieldAclSheet(createMockAppSettings());
-    const byCode = (code: string) => rows.find((r) => r[2] === code);
-    expect(byCode('sales')?.slice(4, 6)).toEqual(['■', '■']); // WRITE
-    expect(byCode('everyone')?.slice(4, 6)).toEqual(['■', '□']); // READ
-    expect(byCode('temp')?.slice(4, 6)).toEqual(['□', '□']); // NONE
+  it('accessibility を閲覧と編集の可否に展開する', () => {
+    const block = firstBlock(buildFieldAclSheet(createMockAppSettings()));
+    const byCode = (code: string) => block.rows.find((row) => row[1] === code);
+    expect(byCode('sales')?.slice(4)).toEqual(['■', '■']); // WRITE
+    expect(byCode('everyone')?.slice(4)).toEqual(['■', '□']); // READ
+    expect(byCode('temp')?.slice(4)).toEqual(['□', '□']); // NONE
+  });
+});
+
+describe('buildRecordAclSheet', () => {
+  it('条件ごとに通し番号を振る', () => {
+    const block = firstBlock(buildRecordAclSheet(createMockAppSettings()));
+    expect(column(block, 'No.')).toEqual([1]);
   });
 });
 
 describe('buildProcessSheet', () => {
-  it('ステータスと作業者、アクションの見出しを返す', () => {
-    const { rows, headerIndex } = buildProcessSheet(createMockAppSettings());
-    expect(headerIndex).toHaveLength(3);
-    expect(rows.find((r) => r[1] === '未対応')?.[2]).toBe('ONE');
-    expect(rows.find((r) => r[2] === 'GROUP:sales')?.[3]).toBe('');
-    expect(rows.find((r) => r[2] === 'USER:user1')?.[3]).toBe('継承しない');
+  const result = () => buildProcessSheet(createMockAppSettings());
+
+  it('ステータスとアクションを別々の表にする', () => {
+    const { blocks } = result();
+    expect(blocks).toHaveLength(2);
+    expect(blocks.map((b) => b.title)).toEqual([
+      'ステータスと作業者',
+      'アクション',
+    ]);
   });
 
-  it('プロセス管理が無効でも見出しだけを返す', () => {
-    const { rows } = buildProcessSheet(createMinimalAppSettings());
-    expect(rows.find((r) => r[1] === 'アクション')).toBeDefined();
+  it('作業者を1件ずつ行に展開する', () => {
+    const block = result().blocks[0]!;
+    const rows = block.rows.filter((row) => row[1] === '未対応');
+    expect(rows.map((row) => [row[3], row[4], row[5]])).toEqual([
+      ['sales', 'GROUP', '■'],
+      ['user1', 'USER', '□'],
+    ]);
+  });
+
+  it('作業者がいないステータスも1行出力する', () => {
+    const block = result().blocks[0]!;
+    const rows = block.rows.filter((row) => row[1] === '完了');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.[3]).toBe('');
+  });
+
+  it('プロセス管理が無効でも表の構成は保つ', () => {
+    const { blocks } = buildProcessSheet(createMinimalAppSettings());
+    expect(blocks).toHaveLength(2);
+    expect(blocks.every((b) => b.rows.length === 0)).toBe(true);
   });
 });

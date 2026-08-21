@@ -2,8 +2,9 @@ import type {
   KintoneFormFieldProperty,
   KintoneFormLayout,
 } from '@kintone/rest-api-client';
-import type { ExcelData, SheetResult, AppSettings } from '@/types';
+import type { ColumnDef, ExcelData, SheetResult, AppSettings } from '@/types';
 import { getFieldProp } from '@/utils/field';
+import { checkMark, joinValues } from '@/utils/format';
 
 /** フィールドプロパティの型エイリアス */
 type FieldProperty = KintoneFormFieldProperty.OneOf;
@@ -28,6 +29,37 @@ type LayoutItem =
     })
   | LayoutPlaceholder;
 
+const COLUMNS: ColumnDef[] = [
+  { group: '基本', header: 'No.', width: 6 },
+  { group: '基本', header: 'フィールドコード', width: 26 },
+  { group: '基本', header: 'フィールド名', width: 26 },
+  { group: '基本', header: 'タイプ', width: 20 },
+  { group: '基本', header: 'テーブル', width: 16 },
+  { group: '基本', header: 'グループ', width: 16 },
+  { group: '入力制約', header: '必須', width: 8 },
+  { group: '入力制約', header: '重複禁止', width: 10 },
+  { group: '入力制約', header: '最大長', width: 9 },
+  { group: '入力制約', header: '最小長', width: 9 },
+  { group: '入力制約', header: '最大値', width: 11 },
+  { group: '入力制約', header: '最小値', width: 11 },
+  { group: '初期値・選択肢', header: 'デフォルト値', width: 26 },
+  { group: '初期値・選択肢', header: '選択肢', width: 32 },
+  { group: '初期値・選択肢', header: '選択肢の並び', width: 13 },
+  { group: '初期値・選択肢', header: '対象ユーザー', width: 26 },
+  { group: '計算・表示形式', header: '計算式', width: 38 },
+  { group: '計算・表示形式', header: '計算式を表示', width: 13 },
+  { group: '計算・表示形式', header: '表示形式', width: 13 },
+  { group: '計算・表示形式', header: '小数桁', width: 8 },
+  { group: '計算・表示形式', header: '単位', width: 8 },
+  { group: '計算・表示形式', header: '単位の位置', width: 11 },
+  { group: '計算・表示形式', header: '桁区切り', width: 10 },
+  { group: '表示', header: 'ラベル表示', width: 11 },
+  { group: '表示', header: 'リンク種別', width: 12 },
+  { group: '表示', header: 'サムネイルサイズ', width: 15 },
+  { group: '表示', header: 'グループ初期表示', width: 15 },
+  { group: '表示', header: '機能の有効', width: 11 },
+];
+
 /**
  * レイアウト項目に対応するフィールドプロパティを取得する。
  *
@@ -49,36 +81,18 @@ function resolveFieldProperty(
   return fields?.[item.code];
 }
 
-export function buildFieldSheet(data: AppSettings): SheetResult {
-  const rows: ExcelData = [
-    [],
-    [
-      '',
-      'フィールドコード',
-      'フィールド名',
-      'タイプ',
-      '表示順',
-      'テーブル',
-      'グループ',
-      'ラベル',
-      '必須',
-      '重複',
-      '最大長',
-      '最小長',
-      '最大値',
-      '最小値',
-      'デフォルト値',
-      '仕様',
-    ],
-  ];
+/** レイアウトを、表示順に並んだ1次元の一覧へ展開する */
+function flattenLayout(data: AppSettings): LayoutItem[] {
   const layoutList: LayoutItem[] = [];
 
   data.layout.layout.forEach((l) => {
     if (l.type === 'ROW') {
       layoutList.push(...l.fields);
-    } else if (l.type === 'GROUP') {
+      return;
+    }
+    if (l.type === 'GROUP') {
       layoutList.push({
-        type: 'GROUP_HEADER' as const,
+        type: 'GROUP_HEADER',
         code: l.code,
         group: true,
         groupName: l.code,
@@ -88,9 +102,11 @@ export function buildFieldSheet(data: AppSettings): SheetResult {
           layoutList.push({ ...f, group: true, groupName: l.code });
         });
       });
-    } else if (l.type === 'SUBTABLE') {
+      return;
+    }
+    if (l.type === 'SUBTABLE') {
       layoutList.push({
-        type: 'SUBTABLE_HEADER' as const,
+        type: 'SUBTABLE_HEADER',
         code: l.code,
         table: true,
         tableName: l.code,
@@ -101,150 +117,113 @@ export function buildFieldSheet(data: AppSettings): SheetResult {
     }
   });
 
-  layoutList.forEach((l, idx) => {
+  return layoutList;
+}
+
+/** 選択肢を index の昇順で並べたラベルの一覧 */
+function optionLabels(field: FieldProperty): string {
+  const options = getFieldProp(field, 'options') as
+    Record<string, { label: string; index: string }> | undefined;
+  if (!options) return '';
+  return joinValues(
+    Object.values(options)
+      .toSorted((a, b) => Number(a.index) - Number(b.index))
+      .map((option) => option.label),
+  );
+}
+
+/** 選択肢に指定されたユーザー・グループ・組織のコード */
+function entityCodes(field: FieldProperty): string {
+  const entities = getFieldProp(field, 'entities');
+  if (!Array.isArray(entities)) return '';
+  return joinValues(
+    (entities as Array<{ code: string }>).map((entity) => entity.code),
+  );
+}
+
+/** デフォルト値。ユーザー選択などは配列で返るためコードを連結する */
+function defaultValue(field: FieldProperty): string {
+  const value = getFieldProp(field, 'defaultValue');
+  if (value === undefined || value === null || value === '') return '';
+  if (!Array.isArray(value)) return String(value);
+  return joinValues(
+    value.map((v) =>
+      typeof v === 'object' && v !== null && 'code' in v
+        ? String((v as { code: string }).code)
+        : String(v),
+    ),
+  );
+}
+
+/** 値を持つ場合だけ文字列にする。未設定と false を区別したい列で使う */
+function optional(value: unknown): string {
+  return value === undefined || value === null ? '' : String(value);
+}
+
+export function buildFieldSheet(data: AppSettings): SheetResult {
+  const rows: ExcelData = [];
+
+  flattenLayout(data).forEach((l, index) => {
     if (l.type === 'LABEL' || l.type === 'SPACER' || l.type === 'HR') {
-      rows.push([
-        '',
-        ('elementId' in l && l.elementId) || ('label' in l && l.label) || '',
-        '',
-        l.type,
-        idx,
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-      ]);
+      const label =
+        ('elementId' in l && l.elementId) || ('label' in l && l.label) || '';
+      rows.push([index, label, '', l.type]);
       return;
     }
-    // GROUP/SUBTABLE のヘッダー行を出力
+
     if (l.type === 'GROUP_HEADER' || l.type === 'SUBTABLE_HEADER') {
-      const fieldType = l.type === 'GROUP_HEADER' ? 'GROUP' : 'SUBTABLE';
+      const isTable = l.type === 'SUBTABLE_HEADER';
       rows.push([
-        '',
+        index,
         l.code,
         '',
-        fieldType,
-        idx,
-        l.type === 'SUBTABLE_HEADER' ? (l.tableName ?? '') : '',
-        l.type === 'GROUP_HEADER' ? (l.groupName ?? '') : '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
+        isTable ? 'SUBTABLE' : 'GROUP',
+        isTable ? (l.tableName ?? '') : '',
+        isTable ? '' : (l.groupName ?? ''),
       ]);
       return;
     }
+
     const f = resolveFieldProperty(data, l);
     if (!f) return;
 
-    const spec: string[] = [];
-    // 選択肢の並び
-    const align = getFieldProp(f, 'align');
-    if (align) {
-      if (align === 'HORIZONTAL') spec.push('水平');
-      else if (align === 'VERTICAL') spec.push('垂直');
-    }
-    // 選択肢名
-    const options = getFieldProp(f, 'options') as
-      Record<string, { label: string; index: string }> | undefined;
-    if (options) {
-      const sortedOptionNames = Object.values(options)
-        .toSorted((a, b) => Number(a.index) - Number(b.index))
-        .map((opt) => opt.label);
-      spec.push(`options=[${sortedOptionNames.join(',')}]`);
-    }
-    // 自動計算式
-    const expression = getFieldProp(f, 'expression');
-    if (expression) spec.push(`expression=${expression}`);
-    // 計算フィールドの計算式を非表示にするかどうか
     const hideExpression = getFieldProp(f, 'hideExpression');
-    if (hideExpression === false) spec.push('計算フィールドの計算式を表示');
-    // 数値の桁区切り
     const digit = getFieldProp(f, 'digit');
-    if (digit !== undefined) {
-      if (digit === false) spec.push('桁区切りを非表示');
-      else if (digit === true) spec.push('桁区切りを表示');
-    }
-    // 画像のサムネイルの大きさ
-    const thumbnailSize = getFieldProp(f, 'thumbnailSize');
-    if (thumbnailSize) spec.push(`thumbnailSize=${thumbnailSize}`);
-    // リンクの種類
-    const protocol = getFieldProp(f, 'protocol');
-    if (protocol) spec.push(String(protocol));
-    // 計算フィールドの表示形式
-    const format = getFieldProp(f, 'format');
-    if (format) spec.push(String(format));
-    // 小数点以下の表示桁数
-    const displayScale = getFieldProp(f, 'displayScale');
-    if (displayScale) spec.push(String(displayScale));
-    // 単位記号
-    const unit = getFieldProp(f, 'unit');
-    if (unit) spec.push(`unit=${unit}`);
-    // 単位記号の表示位置
-    const unitPosition = getFieldProp(f, 'unitPosition');
-    if (unitPosition) spec.push(`unitPosition=${unitPosition}`);
-    // 選択肢のユーザーの一覧
-    const entities = getFieldProp(f, 'entities');
-    if (entities && Array.isArray(entities))
-      spec.push(
-        `entities=[${(entities as Array<{ code: string; type: string }>).map((e) => e.code).join(',')}]`,
-      );
-    // グループ内のフィールドを表示するかどうか
     const openGroup = getFieldProp(f, 'openGroup');
-    if (openGroup === false) spec.push('グループ閉');
-    // 機能が有効かどうか
     const enabled = getFieldProp(f, 'enabled');
-    if (enabled === true) spec.push('有効');
-
-    // defaultValue は配列の場合があるため文字列化
-    let defaultValueStr = '';
-    const defaultValue = getFieldProp(f, 'defaultValue');
-    if (defaultValue) {
-      defaultValueStr = Array.isArray(defaultValue)
-        ? defaultValue
-            .map((v) =>
-              typeof v === 'object' && v !== null && 'code' in v
-                ? (v as { code: string }).code
-                : String(v),
-            )
-            .join(',')
-        : String(defaultValue);
-    }
+    const noLabel = getFieldProp(f, 'noLabel');
 
     rows.push([
-      '',
+      index,
       f.code,
       f.label,
       f.type,
-      idx,
       l.table ? (l.tableName ?? '') : '',
       l.group ? (l.groupName ?? '') : '',
-      getFieldProp(f, 'noLabel') !== undefined
-        ? getFieldProp(f, 'noLabel')
-          ? '非表示'
-          : '表示'
-        : '表示',
       getFieldProp(f, 'required') ? '必須' : '任意',
       getFieldProp(f, 'unique') ? '禁止' : '許可',
-      (getFieldProp(f, 'maxLength') as string | undefined) || '',
-      (getFieldProp(f, 'minLength') as string | undefined) || '',
-      (getFieldProp(f, 'maxValue') as string | undefined) || '',
-      (getFieldProp(f, 'minValue') as string | undefined) || '',
-      defaultValueStr,
-      spec.join(','),
+      optional(getFieldProp(f, 'maxLength')),
+      optional(getFieldProp(f, 'minLength')),
+      optional(getFieldProp(f, 'maxValue')),
+      optional(getFieldProp(f, 'minValue')),
+      defaultValue(f),
+      optionLabels(f),
+      optional(getFieldProp(f, 'align')),
+      entityCodes(f),
+      optional(getFieldProp(f, 'expression')),
+      hideExpression === undefined ? '' : checkMark(!hideExpression),
+      optional(getFieldProp(f, 'format')),
+      optional(getFieldProp(f, 'displayScale')),
+      optional(getFieldProp(f, 'unit')),
+      optional(getFieldProp(f, 'unitPosition')),
+      digit === undefined ? '' : checkMark(digit),
+      checkMark(!noLabel),
+      optional(getFieldProp(f, 'protocol')),
+      optional(getFieldProp(f, 'thumbnailSize')),
+      openGroup === undefined ? '' : checkMark(openGroup),
+      enabled === undefined ? '' : checkMark(enabled),
     ]);
   });
-  return { rows, headerIndex: [1] };
+
+  return { blocks: [{ columns: COLUMNS, rows }] };
 }
