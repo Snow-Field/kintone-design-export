@@ -18,8 +18,10 @@ export const SHEET_NAMES = {
 /** 表は左上から始める */
 const FIRST_COLUMN = 1;
 const FIRST_ROW = 1;
-/** 表と表の間に空ける行数 */
-const BLOCK_GAP = 1;
+/** 表と表の間に空ける列数 */
+const BLOCK_GAP_COLUMNS = 1;
+/** 表と表の間に挟む列の幅 */
+const GAP_COLUMN_WIDTH = 2;
 
 /** 列幅に加える余裕。Excel の自動調整も文字幅ちょうどではなく少し広い */
 const WIDTH_PADDING = 2;
@@ -95,26 +97,33 @@ export function displayWidth(value: ExcelCell, bold = false): number {
  */
 function computeColumnWidths(
   blocks: SheetBlock[],
+  offsets: number[],
   withFilter: boolean,
-): number[] {
-  const widths: number[] = [];
-  const extend = (index: number, width: number) => {
+): Array<number | undefined> {
+  const widths: Array<number | undefined> = [];
+  const extend = (column: number, width: number) => {
+    const index = column - FIRST_COLUMN;
     widths[index] = Math.max(widths[index] ?? 0, width);
   };
 
   const headerExtra = withFilter ? FILTER_BUTTON_WIDTH : 0;
 
-  for (const block of blocks) {
+  blocks.forEach((block, blockIndex) => {
+    const offset = offsets[blockIndex] ?? FIRST_COLUMN;
     block.columns.forEach((column, index) =>
       // 見出しは太字で表示されるぶん幅を要する
-      extend(index, displayWidth(column.header, true) + headerExtra),
+      extend(offset + index, displayWidth(column.header, true) + headerExtra),
     );
     for (const row of block.rows) {
-      row.forEach((value, index) => extend(index, displayWidth(value)));
+      row.forEach((value, index) =>
+        extend(offset + index, displayWidth(value)),
+      );
     }
-  }
+  });
 
   return widths.map((width) => {
+    // 表と表の間に挟まる列は幅を測る対象が無い
+    if (width === undefined) return undefined;
     const clamped = Math.min(
       Math.max(Math.ceil(width) + WIDTH_PADDING, MIN_WIDTH),
       MAX_WIDTH,
@@ -155,14 +164,15 @@ function hasGroupRow(columns: ColumnDef[]): boolean {
 function writeHeader(
   ws: Worksheet,
   startRow: number,
+  startColumn: number,
   columns: ColumnDef[],
 ): number {
   const twoTier = hasGroupRow(columns);
 
   if (twoTier) {
     groupSpans(columns).forEach(({ group, start, end }) => {
-      const from = FIRST_COLUMN + start;
-      const to = FIRST_COLUMN + end;
+      const from = startColumn + start;
+      const to = startColumn + end;
       // group を持たない列は上段を空のままにする
       if (group !== undefined) ws.getCell(startRow, from).value = group;
       if (to > from) ws.mergeCells(startRow, from, startRow, to);
@@ -183,7 +193,7 @@ function writeHeader(
 
   const headerRow = twoTier ? startRow + 1 : startRow;
   columns.forEach((column, index) => {
-    const cell = ws.getCell(headerRow, FIRST_COLUMN + index);
+    const cell = ws.getCell(headerRow, startColumn + index);
     cell.value = column.header;
     cell.font = {
       name: THEME.font.name,
@@ -200,12 +210,17 @@ function writeHeader(
 }
 
 /** 明細行を書き、次に書き込む行番号を返す */
-function writeRows(ws: Worksheet, startRow: number, block: SheetBlock): number {
+function writeRows(
+  ws: Worksheet,
+  startRow: number,
+  startColumn: number,
+  block: SheetBlock,
+): number {
   block.rows.forEach((row, rowIndex) => {
     const target = startRow + rowIndex;
     const striped = rowIndex % 2 === 1;
     block.columns.forEach((_, columnIndex) => {
-      const cell = ws.getCell(target, FIRST_COLUMN + columnIndex);
+      const cell = ws.getCell(target, startColumn + columnIndex);
       const value = row[columnIndex];
       if (value !== undefined && value !== null) cell.value = value;
       cell.font = { name: THEME.font.name, size: THEME.font.size };
@@ -226,34 +241,44 @@ export function addStyledSheet(
   // オートフィルタはシートに1つしか置けないため、表が1つのときだけ設定する
   const withFilter = blocks.length === 1;
 
-  let row = FIRST_ROW;
-  let firstHeaderRow: number | undefined;
-  let firstBlock: SheetBlock | undefined;
+  // 表は横に並べる。縦に積むと列幅が表どうしで共有され、片方の長い値が
+  // もう片方の列まで広げてしまうため。
+  const offsets: number[] = [];
+  let nextColumn = FIRST_COLUMN;
+  for (const block of blocks) {
+    offsets.push(nextColumn);
+    nextColumn += block.columns.length + BLOCK_GAP_COLUMNS;
+  }
 
+  let headerHeight = 0;
   blocks.forEach((block, index) => {
-    if (index > 0) row += BLOCK_GAP;
-    const bodyStart = writeHeader(ws, row, block.columns);
-    if (index === 0) {
-      firstHeaderRow = bodyStart - 1;
-      firstBlock = block;
-    }
-    row = writeRows(ws, bodyStart, block);
+    const startColumn = offsets[index] ?? FIRST_COLUMN;
+    const bodyStart = writeHeader(ws, FIRST_ROW, startColumn, block.columns);
+    headerHeight = Math.max(headerHeight, bodyStart - FIRST_ROW);
+    writeRows(ws, bodyStart, startColumn, block);
   });
 
-  computeColumnWidths(blocks, withFilter).forEach((width, index) => {
+  computeColumnWidths(blocks, offsets, withFilter).forEach((width, index) => {
+    if (width === undefined) return;
     ws.getColumn(FIRST_COLUMN + index).width = width;
+  });
+  // 表の間に挟まる列は区切りとして狭くする
+  offsets.slice(1).forEach((offset) => {
+    ws.getColumn(offset - BLOCK_GAP_COLUMNS).width = GAP_COLUMN_WIDTH;
   });
 
   // 見出しまでを固定する。2段見出しなら2行とも固定される
-  if (firstHeaderRow !== undefined) {
-    ws.views = [{ state: 'frozen', xSplit: 0, ySplit: firstHeaderRow }];
+  const freezeRow = FIRST_ROW + headerHeight - 1;
+  if (headerHeight > 0) {
+    ws.views = [{ state: 'frozen', xSplit: 0, ySplit: freezeRow }];
   }
 
-  if (withFilter && firstHeaderRow !== undefined && firstBlock) {
+  const firstBlock = blocks[0];
+  if (withFilter && firstBlock) {
     ws.autoFilter = {
-      from: { row: firstHeaderRow, column: FIRST_COLUMN },
+      from: { row: freezeRow, column: FIRST_COLUMN },
       to: {
-        row: firstHeaderRow + firstBlock.rows.length,
+        row: freezeRow + firstBlock.rows.length,
         column: FIRST_COLUMN + firstBlock.columns.length - 1,
       },
     };

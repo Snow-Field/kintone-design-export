@@ -38,8 +38,11 @@ const SINGLE_TIER: SheetResult = {
 const TWO_BLOCKS: SheetResult = {
   blocks: [
     {
-      columns: [{ header: 'ステータス名' }],
-      rows: [['未対応'], ['完了']],
+      columns: [{ header: 'ステータス名' }, { header: '作業者' }],
+      rows: [
+        ['未対応', 'sales'],
+        ['完了', ''],
+      ],
     },
     {
       columns: [{ header: 'アクション名' }],
@@ -188,30 +191,37 @@ describe('addStyledSheet（表が2つ）', () => {
     ws = await render('blocks', TWO_BLOCKS);
   });
 
-  it('表を1行だけ空けて縦に並べる', () => {
+  it('表を1列だけ空けて横に並べる', () => {
+    // 1つ目の表は A〜B 列
     expect(ws.getCell('A1').value).toBe('ステータス名');
+    expect(ws.getCell('B1').value).toBe('作業者');
     expect(ws.getCell('A2').value).toBe('未対応');
     expect(ws.getCell('A3').value).toBe('完了');
-    // 1行空けて次の表
-    expect(ws.getCell('A4').value).toBeNull();
-    expect(ws.getCell('A5').value).toBe('アクション名');
-    expect(ws.getCell('A6').value).toBe('担当者を割り当てる');
+    // C 列を空けて、2つ目の表は D 列から
+    expect(ws.getCell('C1').value).toBeNull();
+    expect(ws.getCell('D1').value).toBe('アクション名');
+    expect(ws.getCell('D2').value).toBe('担当者を割り当てる');
   });
 
   it('表が複数あるシートにはオートフィルタを設定しない', () => {
     expect(ws.autoFilter).toBeUndefined();
   });
 
-  it('先頭の表の見出しは固定する', () => {
+  it('どちらの表の見出しも固定する', () => {
     const view = ws.views[0];
     expect(view?.state).toBe('frozen');
     expect(view && 'ySplit' in view ? view.ySplit : undefined).toBe(1);
   });
 
-  it('すべての表を通した最大幅を列幅にする', () => {
-    // 2つ目の表にある「担当者を割り当てる」= 9字 × 2.2 = 19.8 が最長。
-    // 切り上げて 20、余白2を足して 22。
-    // フィルタを設定しないシートなのでボタンぶんは加えない
-    expect(ws.getColumn(1).width).toBe(22);
+  it('表ごとに列が分かれるため列幅が影響し合わない', () => {
+    // 「ステータス名」= 6字 × 2.2 × 1.05 ≒ 13.86 → 切り上げ14 + 余白2 = 16
+    expect(ws.getColumn(1).width).toBe(16);
+    // 2つ目の表の長い値は1つ目の表の列幅に影響しない
+    // 「担当者を割り当てる」= 9字 × 2.2 = 19.8 → 切り上げ20 + 余白2 = 22
+    expect(ws.getColumn(4).width).toBe(22);
+  });
+
+  it('表と表の間の列を狭くする', () => {
+    expect(ws.getColumn(3).width).toBe(2);
   });
 });
