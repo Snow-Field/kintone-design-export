@@ -38,13 +38,11 @@ const SINGLE_TIER: SheetResult = {
 const TWO_BLOCKS: SheetResult = {
   blocks: [
     {
-      title: 'ステータス',
-      columns: [{ header: '名称' }],
+      columns: [{ header: 'ステータス名' }],
       rows: [['未対応'], ['完了']],
     },
     {
-      title: 'アクション',
-      columns: [{ header: '名称' }],
+      columns: [{ header: 'アクション名' }],
       rows: [['担当者を割り当てる']],
     },
   ],
@@ -147,11 +145,11 @@ describe('addStyledSheet（2段見出し）', () => {
     expect(ws.getCell('D4').alignment?.wrapText).toBeFalsy();
   });
 
-  it('列幅を内容の表示幅から決める', () => {
-    // 「コード」= 6、値は1文字。余白1を足して 7
-    expect(ws.getColumn(1).width).toBe(7);
-    // 「備考」= 4 より「メモ」= 4 が同じ。余白1を足して 5
-    expect(ws.getColumn(4).width).toBe(5);
+  it('列幅を内容の表示幅から決め、フィルタボタンぶんを見込む', () => {
+    // 「コード」= 6 にボタン3を足して 9、さらに余白2で 11
+    expect(ws.getColumn(1).width).toBe(11);
+    // 「備考」= 4 にボタン3で 7、余白2で 9。既定値と重なるため 9.1 にずらす
+    expect(ws.getColumn(4).width).toBe(9.1);
   });
 });
 
@@ -172,8 +170,8 @@ describe('addStyledSheet（1段見出し）', () => {
   });
 
   it('最も長い値に列幅を合わせる', () => {
-    // example.cybozu.com = 18、余白1を足して 19
-    expect(ws.getColumn(2).width).toBe(19);
+    // example.cybozu.com = 18、余白2を足して 20
+    expect(ws.getColumn(2).width).toBe(20);
   });
 });
 
@@ -183,14 +181,14 @@ describe('addStyledSheet（表が2つ）', () => {
     ws = await render('blocks', TWO_BLOCKS);
   });
 
-  it('表題を持つ表は表題から始め、間隔を空けて縦に並べる', () => {
-    expect(ws.getCell('A1').value).toBe('ステータス');
-    expect(ws.getCell('A3').value).toBe('名称');
-    expect(ws.getCell('A4').value).toBe('未対応');
-    expect(ws.getCell('A5').value).toBe('完了');
-    expect(ws.getCell('A8').value).toBe('アクション');
-    expect(ws.getCell('A10').value).toBe('名称');
-    expect(ws.getCell('A11').value).toBe('担当者を割り当てる');
+  it('表を1行だけ空けて縦に並べる', () => {
+    expect(ws.getCell('A1').value).toBe('ステータス名');
+    expect(ws.getCell('A2').value).toBe('未対応');
+    expect(ws.getCell('A3').value).toBe('完了');
+    // 1行空けて次の表
+    expect(ws.getCell('A4').value).toBeNull();
+    expect(ws.getCell('A5').value).toBe('アクション名');
+    expect(ws.getCell('A6').value).toBe('担当者を割り当てる');
   });
 
   it('表が複数あるシートにはオートフィルタを設定しない', () => {
@@ -200,13 +198,12 @@ describe('addStyledSheet（表が2つ）', () => {
   it('先頭の表の見出しは固定する', () => {
     const view = ws.views[0];
     expect(view?.state).toBe('frozen');
-    expect(view && 'ySplit' in view ? view.ySplit : undefined).toBe(3);
+    expect(view && 'ySplit' in view ? view.ySplit : undefined).toBe(1);
   });
 
   it('すべての表を通した最大幅を列幅にする', () => {
-    // 2つ目の表にある「担当者を割り当てる」= 18 が最長。余白1を足して 19。
-    // なお ExcelJS は幅が既定値の 9 のとき書き出しを省くため、
-    // 期待値が 9 になる条件では読み戻しても undefined になる。
-    expect(ws.getColumn(1).width).toBe(19);
+    // 2つ目の表にある「担当者を割り当てる」= 18 が最長。余白2を足して 20。
+    // フィルタを設定しないシートなのでボタンぶんは加えない
+    expect(ws.getColumn(1).width).toBe(20);
   });
 });

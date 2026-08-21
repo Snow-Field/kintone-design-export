@@ -54,14 +54,12 @@ export function buildProcessSheet(data: AppSettings): SheetResult {
     action.filterCond,
   ]);
 
+  // 上がステータスと作業者、下がアクション。表題は持たないため、
+  // 上段の見出しでどちらの表かが分かるようにしている
   return {
     blocks: [
-      {
-        title: 'ステータスと作業者',
-        columns: STATUS_COLUMNS,
-        rows: statusRows,
-      },
-      { title: 'アクション', columns: ACTION_COLUMNS, rows: actionRows },
+      { columns: STATUS_COLUMNS, rows: statusRows },
+      { columns: ACTION_COLUMNS, rows: actionRows },
     ],
   };
 }

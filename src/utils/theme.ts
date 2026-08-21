@@ -12,7 +12,6 @@ export const THEME = {
   font: {
     name: 'Yu Gothic UI',
     size: 11,
-    titleSize: 14,
   },
   color: {
     /** 上段見出しの背景 */
@@ -25,7 +24,5 @@ export const THEME = {
     stripeBg: 'FFF2F7FC',
     /** 罫線 */
     border: 'FFBFCBD9',
-    /** 表の上に置く見出しの文字 */
-    titleText: 'FF1F3864',
   },
 } as const;

@@ -21,10 +21,8 @@ export type ColumnDef = {
  * プロセス管理のように1シートへ複数の表を並べる場合がある。
  */
 export type SheetBlock = {
-  /** 表の上に置く見出し。省略すると見出し行から始まる */
-  title?: string;
   columns: ColumnDef[];
-  /** 各行は columns と同じ並び。余白のA列は描画側が付ける */
+  /** 各行は columns と同じ並び */
   rows: ExcelData;
 };
 

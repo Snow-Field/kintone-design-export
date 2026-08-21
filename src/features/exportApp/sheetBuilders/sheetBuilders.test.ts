@@ -281,10 +281,9 @@ describe('buildProcessSheet', () => {
   it('ステータスとアクションを別々の表にする', () => {
     const { blocks } = result();
     expect(blocks).toHaveLength(2);
-    expect(blocks.map((b) => b.title)).toEqual([
-      'ステータスと作業者',
-      'アクション',
-    ]);
+    // 表題を持たないため、見出しでどちらの表かが分かるようにしている
+    expect(blocks[0]?.columns.map((c) => c.header)).toContain('ステータス名');
+    expect(blocks[1]?.columns.map((c) => c.header)).toContain('アクション名');
   });
 
   it('作業者を1件ずつ行に展開する', () => {

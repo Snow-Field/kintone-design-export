@@ -19,13 +19,20 @@ export const SHEET_NAMES = {
 const FIRST_COLUMN = 1;
 const FIRST_ROW = 1;
 /** 表と表の間に空ける行数 */
-const BLOCK_GAP = 2;
+const BLOCK_GAP = 1;
 
 /** 列幅に加える余裕。Excel の自動調整も文字幅ちょうどではなく少し広い */
-const WIDTH_PADDING = 1;
+const WIDTH_PADDING = 2;
+/** オートフィルタのボタンが見出しに重ならないよう確保する幅 */
+const FILTER_BUTTON_WIDTH = 3;
 /** 列幅の下限と、Excel が扱える上限 */
 const MIN_WIDTH = 3;
 const MAX_WIDTH = 255;
+/**
+ * ExcelJS の既定列幅。この値をそのまま指定すると「幅の指定なし」と見なされ
+ * xlsx に記録されず、Excel 側の既定幅（9 より狭い）で表示されてしまう。
+ */
+const EXCELJS_DEFAULT_WIDTH = 9;
 
 /** 全角として数える文字の範囲 */
 const FULL_WIDTH_CHAR =
@@ -67,25 +74,38 @@ export function displayWidth(value: ExcelCell): number {
  * xlsx には「開いたときに自動調整せよ」という指定が無く、Excel の自動調整は
  * 表示時に実測して決まる。そのため見出しと値の表示幅を測って列幅に充てる。
  * 上段の見出しは結合されるため幅の対象にしない（Excel の自動調整も同じ）。
+ *
+ * オートフィルタを設定する表では、見出しにボタンが重なって文字が隠れるため、
+ * 見出しの幅にボタンぶんを上乗せする。
  */
-function computeColumnWidths(blocks: SheetBlock[]): number[] {
+function computeColumnWidths(
+  blocks: SheetBlock[],
+  withFilter: boolean,
+): number[] {
   const widths: number[] = [];
   const extend = (index: number, width: number) => {
     widths[index] = Math.max(widths[index] ?? 0, width);
   };
 
+  const headerExtra = withFilter ? FILTER_BUTTON_WIDTH : 0;
+
   for (const block of blocks) {
     block.columns.forEach((column, index) =>
-      extend(index, displayWidth(column.header)),
+      extend(index, displayWidth(column.header) + headerExtra),
     );
     for (const row of block.rows) {
       row.forEach((value, index) => extend(index, displayWidth(value)));
     }
   }
 
-  return widths.map((width) =>
-    Math.min(Math.max(width + WIDTH_PADDING, MIN_WIDTH), MAX_WIDTH),
-  );
+  return widths.map((width) => {
+    const clamped = Math.min(
+      Math.max(width + WIDTH_PADDING, MIN_WIDTH),
+      MAX_WIDTH,
+    );
+    // 既定値と同じ幅は記録されないため、わずかにずらして必ず反映させる
+    return clamped === EXCELJS_DEFAULT_WIDTH ? clamped + 0.1 : clamped;
+  });
 }
 
 /** 隣り合う同じ group をひとまとまりとして、結合する範囲を求める */
@@ -113,17 +133,6 @@ function groupSpans(columns: ColumnDef[]): Array<{
 /** 表の見出しが2段かどうか。1列でも group を持てば2段にする */
 function hasGroupRow(columns: ColumnDef[]): boolean {
   return columns.some((column) => column.group !== undefined);
-}
-
-function writeTitle(ws: Worksheet, row: number, title: string) {
-  const cell = ws.getCell(row, FIRST_COLUMN);
-  cell.value = title;
-  cell.font = {
-    name: THEME.font.name,
-    size: THEME.font.titleSize,
-    bold: true,
-    color: { argb: THEME.color.titleText },
-  };
 }
 
 /** 見出しを書き、次に書き込む行番号を返す */
@@ -198,6 +207,8 @@ export function addStyledSheet(
   { blocks }: SheetResult,
 ) {
   const ws = wb.addWorksheet(name);
+  // オートフィルタはシートに1つしか置けないため、表が1つのときだけ設定する
+  const withFilter = blocks.length === 1;
 
   let row = FIRST_ROW;
   let firstHeaderRow: number | undefined;
@@ -205,10 +216,6 @@ export function addStyledSheet(
 
   blocks.forEach((block, index) => {
     if (index > 0) row += BLOCK_GAP;
-    if (block.title) {
-      writeTitle(ws, row, block.title);
-      row += 2;
-    }
     const bodyStart = writeHeader(ws, row, block.columns);
     if (index === 0) {
       firstHeaderRow = bodyStart - 1;
@@ -217,7 +224,7 @@ export function addStyledSheet(
     row = writeRows(ws, bodyStart, block);
   });
 
-  computeColumnWidths(blocks).forEach((width, index) => {
+  computeColumnWidths(blocks, withFilter).forEach((width, index) => {
     ws.getColumn(FIRST_COLUMN + index).width = width;
   });
 
@@ -226,8 +233,7 @@ export function addStyledSheet(
     ws.views = [{ state: 'frozen', xSplit: 0, ySplit: firstHeaderRow }];
   }
 
-  // オートフィルタはシートに1つしか置けないため、表が1つのときだけ設定する
-  if (blocks.length === 1 && firstHeaderRow !== undefined && firstBlock) {
+  if (withFilter && firstHeaderRow !== undefined && firstBlock) {
     ws.autoFilter = {
       from: { row: firstHeaderRow, column: FIRST_COLUMN },
       to: {
