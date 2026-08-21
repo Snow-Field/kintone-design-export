@@ -39,11 +39,10 @@ chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
 });
 
 async function exportAppDesign() {
-  const match = window.location.pathname.match(/\/k\/(\d+)/);
-  if (!match) {
+  const appId = window.location.pathname.match(/\/k\/(\d+)/)?.[1];
+  if (!appId) {
     return { success: false, message: 'Kintoneアプリの画面で実行してください' };
   }
-  const appId = match[1];
 
   try {
     const data = await fetchAllSettings(appId);
