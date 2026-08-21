@@ -1,0 +1,8 @@
+dist
+node_modules
+package-lock.json
+*.tsbuildinfo
+.claude
+
+# 日本語ドキュメントは Prettier の桁揃えが全角幅を正しく扱えないため対象外
+*.md

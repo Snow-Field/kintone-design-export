@@ -1,8 +1,8 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import { crx } from "@crxjs/vite-plugin";
-import manifest from "./public/manifest.json";
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { crx } from '@crxjs/vite-plugin';
+import manifest from './public/manifest.json' with { type: 'json' };
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [tailwindcss(), react(), crx({ manifest })],
@@ -10,6 +10,6 @@ export default defineConfig({
     chunkSizeWarningLimit: 2000,
   },
   resolve: {
-    alias: [{ find: "@/", replacement: `${__dirname}/src/` }],
+    alias: [{ find: '@/', replacement: `${import.meta.dirname}/src/` }],
   },
 });

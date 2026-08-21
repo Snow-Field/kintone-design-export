@@ -1,4 +1,4 @@
-import type { KintoneFormFieldProperty } from "@kintone/rest-api-client";
+import type { KintoneFormFieldProperty } from '@kintone/rest-api-client';
 
 /** フィールドプロパティの型エイリアス */
 type FieldProperty = KintoneFormFieldProperty.OneOf;

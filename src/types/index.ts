@@ -1,6 +1,6 @@
-import { KintoneRestAPIClient } from "@kintone/rest-api-client";
+import { KintoneRestAPIClient } from '@kintone/rest-api-client';
 
-type ClientApp = KintoneRestAPIClient["app"];
+type ClientApp = KintoneRestAPIClient['app'];
 
 export type ExcelCell = string | number | boolean | null | undefined;
 export type ExcelData = ExcelCell[][];
@@ -19,7 +19,7 @@ export type AppStatusResponse = {
       name: string;
       index: string;
       assignee?: {
-        type: "ONE" | "ALL" | "ANY";
+        type: 'ONE' | 'ALL' | 'ANY';
         entities: Array<{
           entity: { type: string; code: string };
           includeSubs: boolean;
@@ -36,13 +36,13 @@ export type AppStatusResponse = {
 };
 
 export type AppSettings = {
-  app: Awaited<ReturnType<ClientApp["getApp"]>>;
-  fields: Awaited<ReturnType<ClientApp["getFormFields"]>>;
-  layout: Awaited<ReturnType<ClientApp["getFormLayout"]>>;
-  actions: Awaited<ReturnType<ClientApp["getAppActions"]>>;
-  views: Awaited<ReturnType<ClientApp["getViews"]>>;
-  appAcl: Awaited<ReturnType<ClientApp["getAppAcl"]>>;
-  recordAcl: Awaited<ReturnType<ClientApp["getRecordAcl"]>>;
-  fieldAcl: Awaited<ReturnType<ClientApp["getFieldAcl"]>>;
+  app: Awaited<ReturnType<ClientApp['getApp']>>;
+  fields: Awaited<ReturnType<ClientApp['getFormFields']>>;
+  layout: Awaited<ReturnType<ClientApp['getFormLayout']>>;
+  actions: Awaited<ReturnType<ClientApp['getAppActions']>>;
+  views: Awaited<ReturnType<ClientApp['getViews']>>;
+  appAcl: Awaited<ReturnType<ClientApp['getAppAcl']>>;
+  recordAcl: Awaited<ReturnType<ClientApp['getRecordAcl']>>;
+  fieldAcl: Awaited<ReturnType<ClientApp['getFieldAcl']>>;
   status: AppStatusResponse;
 };

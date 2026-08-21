@@ -1,5 +1,5 @@
 const pad = (num: number) => {
-  return String(num).padStart(2, "0");
+  return String(num).padStart(2, '0');
 };
 
 export function getFormattedDate() {
@@ -14,7 +14,7 @@ export function getFormattedDate() {
   };
 
   const offsetMinutes = -now.getTimezoneOffset();
-  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const sign = offsetMinutes >= 0 ? '+' : '-';
   const tzHours = pad(Math.floor(Math.abs(offsetMinutes) / 60));
   const tzMinutes = pad(Math.abs(offsetMinutes) % 60);
   const timezone = `${sign}${tzHours}${tzMinutes}`;

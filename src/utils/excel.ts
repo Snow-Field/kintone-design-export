@@ -1,41 +1,41 @@
-import * as XLSX from "xlsx-js-style";
-import type { ExcelData } from "@/types";
+import * as XLSX from 'xlsx-js-style';
+import type { ExcelData } from '@/types';
 
 export const SHEET_NAMES = {
-  GENERAL: "一般情報",
-  FIELD: "フィールド",
-  CALC: "自動計算情報",
-  ACTION: "アクション情報",
-  LOOKUP: "ルックアップ情報",
-  REFERENCE: "関連レコード情報",
-  VIEW: "一覧",
-  APP_ACL: "アプリのアクセス権",
-  RECORD_ACL: "レコードのアクセス権",
-  FIELD_ACL: "フィールドのアクセス権",
-  PROCESS: "プロセス管理",
+  GENERAL: '一般情報',
+  FIELD: 'フィールド',
+  CALC: '自動計算情報',
+  ACTION: 'アクション情報',
+  LOOKUP: 'ルックアップ情報',
+  REFERENCE: '関連レコード情報',
+  VIEW: '一覧',
+  APP_ACL: 'アプリのアクセス権',
+  RECORD_ACL: 'レコードのアクセス権',
+  FIELD_ACL: 'フィールドのアクセス権',
+  PROCESS: 'プロセス管理',
 } as const;
 
 export const STYLES = {
   TITLE: {
-    font: { name: "メイリオ", sz: 16, bold: true },
+    font: { name: 'メイリオ', sz: 16, bold: true },
   },
   HEADER: {
-    font: { name: "メイリオ", sz: 11, bold: true },
-    fill: { fgColor: { rgb: "33CCCC" } },
+    font: { name: 'メイリオ', sz: 11, bold: true },
+    fill: { fgColor: { rgb: '33CCCC' } },
     border: {
-      top: { style: "thin" },
-      bottom: { style: "thin" },
-      left: { style: "thin" },
-      right: { style: "thin" },
+      top: { style: 'thin' },
+      bottom: { style: 'thin' },
+      left: { style: 'thin' },
+      right: { style: 'thin' },
     },
   },
   CELL: {
-    font: { name: "メイリオ", sz: 11 },
+    font: { name: 'メイリオ', sz: 11 },
     border: {
-      top: { style: "thin" },
-      bottom: { style: "thin" },
-      left: { style: "thin" },
-      right: { style: "thin" },
+      top: { style: 'thin' },
+      bottom: { style: 'thin' },
+      left: { style: 'thin' },
+      right: { style: 'thin' },
     },
   },
 };
@@ -58,10 +58,10 @@ export const COL_WIDTHS: Record<string, number[]> = {
 
 /** [一般情報]シート専用のスタイルを適用する */
 function applyGeneralInfoStyle(ws: XLSX.WorkSheet) {
-  if (ws["B1"]) {
-    ws["B1"].s = STYLES.TITLE;
+  if (ws['B1']) {
+    ws['B1'].s = STYLES.TITLE;
   }
-  for (const cell of ["B3", "B4", "B5", "B6", "B7"]) {
+  for (const cell of ['B3', 'B4', 'B5', 'B6', 'B7']) {
     if (ws[cell]) ws[cell].s = STYLES.HEADER;
   }
 }
@@ -72,7 +72,7 @@ export function addStyledSheet(
   { rows, headerIndex }: { rows: ExcelData; headerIndex: number[] },
 ) {
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
   const headerIndexSet = new Set([...(headerIndex ?? [1])]);
 
   for (let R = range.s.r; R <= range.e.r; ++R) {
@@ -88,15 +88,15 @@ export function addStyledSheet(
     applyGeneralInfoStyle(ws);
   }
 
-  if (COL_WIDTHS[name]) ws["!cols"] = COL_WIDTHS[name].map((w) => ({ wpx: w }));
+  if (COL_WIDTHS[name]) ws['!cols'] = COL_WIDTHS[name].map((w) => ({ wpx: w }));
   XLSX.utils.book_append_sheet(wb, ws, name);
 }
 
 export function saveExcelFile(wb: XLSX.WorkBook, filename: string) {
-  const wbOut = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([wbOut], { type: "application/octet-stream" });
+  const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbOut], { type: 'application/octet-stream' });
   const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();

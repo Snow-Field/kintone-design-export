@@ -1,8 +1,8 @@
-import * as XLSX from "xlsx-js-style";
-import { fetchAllSettings } from "@/api/kintoneClient";
-import { getFormattedDate } from "@/utils/date";
-import { addStyledSheet, saveExcelFile, SHEET_NAMES } from "@/utils/excel";
-import { getErrorMessage } from "@/utils/error";
+import * as XLSX from 'xlsx-js-style';
+import { fetchAllSettings } from '@/api/kintoneClient';
+import { getFormattedDate } from '@/utils/date';
+import { addStyledSheet, saveExcelFile, SHEET_NAMES } from '@/utils/excel';
+import { getErrorMessage } from '@/utils/error';
 import {
   buildGeneralSheet,
   buildFieldSheet,
@@ -15,7 +15,7 @@ import {
   buildRecordAclSheet,
   buildFieldAclSheet,
   buildProcessSheet,
-} from "./sheetBuilders";
+} from './sheetBuilders';
 
 const sheetDefinitions = [
   { name: SHEET_NAMES.GENERAL, builder: buildGeneralSheet },
@@ -32,7 +32,7 @@ const sheetDefinitions = [
 ] as const;
 
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
-  if (request.action === "START_EXPORT") {
+  if (request.action === 'START_EXPORT') {
     exportAppDesign().then((res) => sendResponse(res));
     return true;
   }
@@ -41,7 +41,7 @@ chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
 async function exportAppDesign() {
   const match = window.location.pathname.match(/\/k\/(\d+)/);
   if (!match) {
-    return { success: false, message: "Kintoneアプリの画面で実行してください" };
+    return { success: false, message: 'Kintoneアプリの画面で実行してください' };
   }
   const appId = match[1];
 
@@ -55,7 +55,7 @@ async function exportAppDesign() {
 
     saveExcelFile(
       wb,
-      `${location.hostname.split(".")[0]}-${appId}-${getFormattedDate()}.xlsx`,
+      `${location.hostname.split('.')[0]}-${appId}-${getFormattedDate()}.xlsx`,
     );
     return { success: true };
   } catch (e: unknown) {

@@ -1,5 +1,5 @@
-import { KintoneRestAPIClient } from "@kintone/rest-api-client";
-import type { AppSettings, AppStatusResponse } from "../types";
+import { KintoneRestAPIClient } from '@kintone/rest-api-client';
+import type { AppSettings, AppStatusResponse } from '../types';
 
 const client = new KintoneRestAPIClient();
 
@@ -7,7 +7,7 @@ const client = new KintoneRestAPIClient();
 async function fetchAppStatus(appId: string): Promise<AppStatusResponse> {
   const url = `${location.origin}/k/v1/app/status.json?app=${appId}`;
   const res = await fetch(url, {
-    headers: { "X-Requested-With": "XMLHttpRequest" },
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
   });
   if (!res.ok) {
     throw new Error(`プロセス管理の取得に失敗しました: ${res.statusText}`);
