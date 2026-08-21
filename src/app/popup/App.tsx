@@ -1,49 +1,49 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   FileSpreadsheet,
   Loader2,
   CheckCircle2,
   AlertCircle,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { getErrorMessage } from "@/utils/error";
-import "@/index.css";
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { getErrorMessage } from '@/utils/error';
+import '@/index.css';
 
-type StatusType = "idle" | "loading" | "success" | "error";
+type StatusType = 'idle' | 'loading' | 'success' | 'error';
 
 export const App = () => {
-  const [status, setStatus] = useState<StatusType>("idle");
-  const [message, setMessage] = useState<string>("");
+  const [status, setStatus] = useState<StatusType>('idle');
+  const [message, setMessage] = useState<string>('');
 
   const handleExport = async () => {
-    setStatus("loading");
-    setMessage("");
+    setStatus('loading');
+    setMessage('');
 
     try {
       const [tab] = await chrome.tabs.query({
         active: true,
         currentWindow: true,
       });
-      if (!tab.id) throw new Error("タブが見つかりません");
+      if (!tab.id) throw new Error('タブが見つかりません');
 
       const response = await chrome.tabs.sendMessage(tab.id, {
-        action: "START_EXPORT",
+        action: 'START_EXPORT',
       });
 
       if (response?.success) {
-        setStatus("success");
-        setMessage("出力が完了しました");
+        setStatus('success');
+        setMessage('出力が完了しました');
       } else {
-        setStatus("error");
-        setMessage(response?.message || "不明なエラー");
+        setStatus('error');
+        setMessage(response?.message || '不明なエラー');
       }
     } catch (e: unknown) {
-      setStatus("error");
+      setStatus('error');
       if (
         e instanceof Error &&
-        e.message.includes("Could not establish connection")
+        e.message.includes('Could not establish connection')
       ) {
-        setMessage("kintoneのページで実行してください");
+        setMessage('kintoneのページで実行してください');
       } else {
         setMessage(getErrorMessage(e));
       }
@@ -55,11 +55,11 @@ export const App = () => {
     loading: null,
     success: {
       icon: <CheckCircle2 className="h-4 w-4 shrink-0" />,
-      className: "bg-green-50 text-green-700 border border-green-200",
+      className: 'bg-green-50 text-green-700 border border-green-200',
     },
     error: {
       icon: <AlertCircle className="h-4 w-4 shrink-0" />,
-      className: "bg-red-50 text-red-700 border border-red-200",
+      className: 'bg-red-50 text-red-700 border border-red-200',
     },
   };
 
@@ -76,10 +76,10 @@ export const App = () => {
 
       <Button
         onClick={handleExport}
-        disabled={status === "loading"}
+        disabled={status === 'loading'}
         className="w-full"
       >
-        {status === "loading" ? (
+        {status === 'loading' ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
             処理中...
