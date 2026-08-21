@@ -60,14 +60,19 @@ async function render(name: string, result: SheetResult): Promise<Worksheet> {
 }
 
 describe('displayWidth', () => {
-  it('半角を1、全角を2として数える', () => {
+  it('半角を1、全角を2.2として数える', () => {
     expect(displayWidth('abc')).toBe(3);
-    expect(displayWidth('あいう')).toBe(6);
-    expect(displayWidth('ab漢字')).toBe(6);
+    expect(displayWidth('あいう')).toBeCloseTo(6.6);
+    expect(displayWidth('ab漢字')).toBeCloseTo(6.4);
+  });
+
+  it('太字はさらに広く見積もる', () => {
+    expect(displayWidth('あいう', true)).toBeCloseTo(6.93);
+    expect(displayWidth('abc', true)).toBeCloseTo(3.15);
   });
 
   it('セル内改行がある場合は最も長い行で測る', () => {
-    expect(displayWidth('abc\nあいうえお')).toBe(10);
+    expect(displayWidth('abc\nあいうえお')).toBeCloseTo(11);
   });
 
   it('値を持たない場合は 0 にする', () => {
@@ -146,10 +151,12 @@ describe('addStyledSheet（2段見出し）', () => {
   });
 
   it('列幅を内容の表示幅から決め、フィルタボタンぶんを見込む', () => {
-    // 「コード」= 6 にボタン3を足して 9、さらに余白2で 11
-    expect(ws.getColumn(1).width).toBe(11);
-    // 「備考」= 4 にボタン3で 7、余白2で 9。既定値と重なるため 9.1 にずらす
-    expect(ws.getColumn(4).width).toBe(9.1);
+    // 見出し「コード」= 3字 × 2.2 × 1.05 ≒ 6.93 にボタン3を足して 9.93、
+    // 切り上げて 10、余白2を加えて 12
+    expect(ws.getColumn(1).width).toBe(12);
+    // 見出し「備考」= 2字 × 2.2 × 1.05 ≒ 4.62 にボタン3で 7.62、
+    // 切り上げて 8、余白2で 10
+    expect(ws.getColumn(4).width).toBe(10);
   });
 });
 
@@ -202,8 +209,9 @@ describe('addStyledSheet（表が2つ）', () => {
   });
 
   it('すべての表を通した最大幅を列幅にする', () => {
-    // 2つ目の表にある「担当者を割り当てる」= 18 が最長。余白2を足して 20。
+    // 2つ目の表にある「担当者を割り当てる」= 9字 × 2.2 = 19.8 が最長。
+    // 切り上げて 20、余白2を足して 22。
     // フィルタを設定しないシートなのでボタンぶんは加えない
-    expect(ws.getColumn(1).width).toBe(20);
+    expect(ws.getColumn(1).width).toBe(22);
   });
 });

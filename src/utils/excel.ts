@@ -54,18 +54,33 @@ export function createWorkbook(): Workbook {
 }
 
 /**
- * セルの表示幅を Excel の文字数単位で数える。
- * 全角は半角2文字分にあたる。セル内改行がある場合は最も長い行で測る。
+ * 全角文字1つぶんの幅。
+ *
+ * Excel の列幅は「標準フォントの数字1文字ぶん」を単位としており、日本語
+ * フォントの全角文字はその2倍よりわずかに広い。単純に2で数えると文字数が
+ * 多い列ほど不足が積み上がるため、実際の字幅に近い係数を使う。
  */
-export function displayWidth(value: ExcelCell): number {
+const FULL_WIDTH_RATIO = 2.2;
+
+/** 太字は通常より字幅が広がる。見出しに用いる */
+const BOLD_RATIO = 1.05;
+
+/**
+ * セルの表示幅を Excel の文字数単位で数える。
+ * セル内改行がある場合は最も長い行で測る。
+ */
+export function displayWidth(value: ExcelCell, bold = false): number {
   if (value === null || value === undefined) return 0;
-  return String(value)
+  const width = String(value)
     .split('\n')
     .reduce((max, line) => {
-      let width = 0;
-      for (const char of line) width += FULL_WIDTH_CHAR.test(char) ? 2 : 1;
-      return Math.max(max, width);
+      let sum = 0;
+      for (const char of line) {
+        sum += FULL_WIDTH_CHAR.test(char) ? FULL_WIDTH_RATIO : 1;
+      }
+      return Math.max(max, sum);
     }, 0);
+  return bold ? width * BOLD_RATIO : width;
 }
 
 /**
@@ -91,7 +106,8 @@ function computeColumnWidths(
 
   for (const block of blocks) {
     block.columns.forEach((column, index) =>
-      extend(index, displayWidth(column.header) + headerExtra),
+      // 見出しは太字で表示されるぶん幅を要する
+      extend(index, displayWidth(column.header, true) + headerExtra),
     );
     for (const row of block.rows) {
       row.forEach((value, index) => extend(index, displayWidth(value)));
@@ -100,7 +116,7 @@ function computeColumnWidths(
 
   return widths.map((width) => {
     const clamped = Math.min(
-      Math.max(width + WIDTH_PADDING, MIN_WIDTH),
+      Math.max(Math.ceil(width) + WIDTH_PADDING, MIN_WIDTH),
       MAX_WIDTH,
     );
     // 既定値と同じ幅は記録されないため、わずかにずらして必ず反映させる
