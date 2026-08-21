@@ -11,6 +11,12 @@ export type SheetResult = {
   headerIndex: number[];
 };
 
+/** 対象アプリの所在。guestSpaceId があればゲストスペースのアプリを指す */
+export type AppLocation = {
+  appId: string;
+  guestSpaceId?: string;
+};
+
 export type AppStatusResponse = {
   enable: boolean;
   states?: Record<

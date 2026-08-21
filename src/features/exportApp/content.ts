@@ -3,6 +3,7 @@ import { fetchAllSettings } from '@/api/kintoneClient';
 import { getFormattedDate } from '@/utils/date';
 import { addStyledSheet, saveExcelFile, SHEET_NAMES } from '@/utils/excel';
 import { getErrorMessage } from '@/utils/error';
+import { parseAppLocation } from '@/utils/kintoneUrl';
 import {
   buildGeneralSheet,
   buildFieldSheet,
@@ -39,13 +40,13 @@ chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
 });
 
 async function exportAppDesign() {
-  const appId = window.location.pathname.match(/\/k\/(\d+)/)?.[1];
-  if (!appId) {
+  const appLocation = parseAppLocation(window.location.pathname);
+  if (!appLocation) {
     return { success: false, message: 'Kintoneアプリの画面で実行してください' };
   }
 
   try {
-    const data = await fetchAllSettings(appId);
+    const data = await fetchAllSettings(appLocation);
     const wb = XLSX.utils.book_new();
 
     sheetDefinitions.forEach(({ name, builder }) => {
@@ -54,7 +55,7 @@ async function exportAppDesign() {
 
     saveExcelFile(
       wb,
-      `${location.hostname.split('.')[0]}-${appId}-${getFormattedDate()}.xlsx`,
+      `${location.hostname.split('.')[0]}-${appLocation.appId}-${getFormattedDate()}.xlsx`,
     );
     return { success: true };
   } catch (e: unknown) {

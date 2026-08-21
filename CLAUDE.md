@@ -77,7 +77,7 @@ src/app/popup/App.tsx  ──►  src/features/exportApp/content.ts
 - 実行環境は `node`。一般情報シートが `location.hostname` を参照するため、テスト側で `vi.stubGlobal("location", ...)` を行っている。ブラウザ API に依存する処理を増やす場合は同様にスタブする。
 - `vitest.config.ts` は `vite.config.ts` とは別に用意している。crxjs プラグインをテスト実行時に読み込ませないため。
 
-**既知の制約**: content script の appId 抽出は `/\/k\/(\d+)/` で行っている（`content.ts`）。ゲストスペースのアプリは URL が `/k/guest/<スペースID>/<アプリID>/` となりこの正規表現に一致しないため、現状では動作しない。対応する場合はゲストスペース用の API パスも必要になる。
+**ゲストスペース**: アプリの所在は `parseAppLocation`（`src/utils/kintoneUrl.ts`）が URL から解決し、`AppLocation`（`appId` と任意の `guestSpaceId`）として扱う。ゲストスペースでは REST API のパスが `/k/guest/<スペースID>/v1/...` に変わるため、`KintoneRestAPIClient` には `guestSpaceId` を渡し、`app/status.json` の生 fetch も `apiBasePath` でパスを切り替えている。**URL からアプリを特定する処理を増やす場合は正規表現を直書きせず `parseAppLocation` を使うこと。**
 
 ### 型の扱い
 
