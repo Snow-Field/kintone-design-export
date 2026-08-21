@@ -28,6 +28,27 @@ type LayoutItem =
     })
   | LayoutPlaceholder;
 
+/**
+ * レイアウト項目に対応するフィールドプロパティを取得する。
+ *
+ * getFormFields は明細内のフィールドを properties 直下ではなく
+ * サブテーブルの fields 配下に返すため、テーブル内の項目は
+ * サブテーブル経由で解決する。
+ */
+function resolveFieldProperty(
+  data: AppSettings,
+  item: { code: string; table?: boolean; tableName?: string },
+): FieldProperty | undefined {
+  if (!item.table || !item.tableName) {
+    return data.fields.properties[item.code];
+  }
+  const subtable = data.fields.properties[item.tableName];
+  if (!subtable) return undefined;
+  const fields = getFieldProp(subtable, 'fields') as
+    Record<string, FieldProperty> | undefined;
+  return fields?.[item.code];
+}
+
 export function buildFieldSheet(data: AppSettings): SheetResult {
   const rows: ExcelData = [
     [],
@@ -125,7 +146,7 @@ export function buildFieldSheet(data: AppSettings): SheetResult {
       ]);
       return;
     }
-    const f: FieldProperty | undefined = data.fields.properties[l.code];
+    const f = resolveFieldProperty(data, l);
     if (!f) return;
 
     const spec: string[] = [];
