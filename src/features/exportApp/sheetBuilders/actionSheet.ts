@@ -1,17 +1,17 @@
 import type { ColumnDef, ExcelData, SheetResult, AppSettings } from '@/types';
 
 const COLUMNS: ColumnDef[] = [
-  { group: 'アクション', header: 'アクション名', width: 22 },
-  { group: 'アクション', header: 'アクションID', width: 14 },
-  { group: 'アクション', header: 'No.', width: 6 },
-  { group: 'コピー先', header: 'アプリID', width: 12 },
-  { group: 'コピー先', header: 'アプリコード', width: 20 },
-  { group: 'フィールドの関連付け', header: '種別', width: 14 },
-  { group: 'フィールドの関連付け', header: 'コピー元フィールド', width: 26 },
-  { group: 'フィールドの関連付け', header: 'コピー先フィールド', width: 26 },
-  { group: '実行できる条件', header: '利用者コード', width: 20 },
-  { group: '実行できる条件', header: '利用者の種類', width: 16 },
-  { group: '実行できる条件', header: '実行条件', width: 36 },
+  { group: 'アクション', header: 'アクション名' },
+  { group: 'アクション', header: 'アクションID' },
+  { group: 'アクション', header: 'No.' },
+  { group: 'コピー先', header: 'アプリID' },
+  { group: 'コピー先', header: 'アプリコード' },
+  { group: 'フィールドの関連付け', header: '種別' },
+  { group: 'フィールドの関連付け', header: 'コピー元フィールド' },
+  { group: 'フィールドの関連付け', header: 'コピー先フィールド' },
+  { group: '実行できる条件', header: '利用者コード' },
+  { group: '実行できる条件', header: '利用者の種類' },
+  { group: '実行できる条件', header: '実行条件' },
 ];
 
 export function buildActionSheet(data: AppSettings): SheetResult {

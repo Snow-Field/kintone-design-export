@@ -8,57 +8,46 @@ exports[`アクション情報 シート > 標準構成の出力が変化しな�
         {
           "group": "アクション",
           "header": "アクション名",
-          "width": 22,
         },
         {
           "group": "アクション",
           "header": "アクションID",
-          "width": 14,
         },
         {
           "group": "アクション",
           "header": "No.",
-          "width": 6,
         },
         {
           "group": "コピー先",
           "header": "アプリID",
-          "width": 12,
         },
         {
           "group": "コピー先",
           "header": "アプリコード",
-          "width": 20,
         },
         {
           "group": "フィールドの関連付け",
           "header": "種別",
-          "width": 14,
         },
         {
           "group": "フィールドの関連付け",
           "header": "コピー元フィールド",
-          "width": 26,
         },
         {
           "group": "フィールドの関連付け",
           "header": "コピー先フィールド",
-          "width": 26,
         },
         {
           "group": "実行できる条件",
           "header": "利用者コード",
-          "width": 20,
         },
         {
           "group": "実行できる条件",
           "header": "利用者の種類",
-          "width": 16,
         },
         {
           "group": "実行できる条件",
           "header": "実行条件",
-          "width": 36,
         },
       ],
       "rows": [
@@ -102,52 +91,42 @@ exports[`アプリのアクセス権 シート > 標準構成の出力が変化�
         {
           "group": "対象",
           "header": "コード",
-          "width": 24,
         },
         {
           "group": "対象",
           "header": "種類",
-          "width": 16,
         },
         {
           "group": "対象",
           "header": "下位組織にも適用",
-          "width": 15,
         },
         {
           "group": "レコード",
           "header": "閲覧",
-          "width": 7,
         },
         {
           "group": "レコード",
           "header": "追加",
-          "width": 7,
         },
         {
           "group": "レコード",
           "header": "編集",
-          "width": 7,
         },
         {
           "group": "レコード",
           "header": "削除",
-          "width": 7,
         },
         {
           "group": "レコード",
           "header": "読込",
-          "width": 7,
         },
         {
           "group": "レコード",
           "header": "書出",
-          "width": 7,
         },
         {
           "group": "アプリ",
           "header": "管理",
-          "width": 7,
         },
       ],
       "rows": [
@@ -189,142 +168,114 @@ exports[`フィールド シート > 標準構成の出力が変化しない 1`]
         {
           "group": "基本",
           "header": "No.",
-          "width": 6,
         },
         {
           "group": "基本",
           "header": "フィールドコード",
-          "width": 26,
         },
         {
           "group": "基本",
           "header": "フィールド名",
-          "width": 26,
         },
         {
           "group": "基本",
           "header": "タイプ",
-          "width": 20,
         },
         {
           "group": "基本",
           "header": "テーブル",
-          "width": 16,
         },
         {
           "group": "基本",
           "header": "グループ",
-          "width": 16,
         },
         {
           "group": "入力制約",
           "header": "必須",
-          "width": 8,
         },
         {
           "group": "入力制約",
           "header": "重複禁止",
-          "width": 10,
         },
         {
           "group": "入力制約",
           "header": "最大長",
-          "width": 9,
         },
         {
           "group": "入力制約",
           "header": "最小長",
-          "width": 9,
         },
         {
           "group": "入力制約",
           "header": "最大値",
-          "width": 11,
         },
         {
           "group": "入力制約",
           "header": "最小値",
-          "width": 11,
         },
         {
           "group": "初期値・選択肢",
           "header": "デフォルト値",
-          "width": 26,
         },
         {
           "group": "初期値・選択肢",
           "header": "選択肢",
-          "width": 32,
         },
         {
           "group": "初期値・選択肢",
           "header": "選択肢の並び",
-          "width": 13,
         },
         {
           "group": "初期値・選択肢",
           "header": "対象ユーザー",
-          "width": 26,
         },
         {
           "group": "計算・表示形式",
           "header": "計算式",
-          "width": 38,
         },
         {
           "group": "計算・表示形式",
           "header": "計算式を表示",
-          "width": 13,
         },
         {
           "group": "計算・表示形式",
           "header": "表示形式",
-          "width": 13,
         },
         {
           "group": "計算・表示形式",
           "header": "小数桁",
-          "width": 8,
         },
         {
           "group": "計算・表示形式",
           "header": "単位",
-          "width": 8,
         },
         {
           "group": "計算・表示形式",
           "header": "単位の位置",
-          "width": 11,
         },
         {
           "group": "計算・表示形式",
           "header": "桁区切り",
-          "width": 10,
         },
         {
           "group": "表示",
           "header": "ラベル表示",
-          "width": 11,
         },
         {
           "group": "表示",
           "header": "リンク種別",
-          "width": 12,
         },
         {
           "group": "表示",
           "header": "サムネイルサイズ",
-          "width": 15,
         },
         {
           "group": "表示",
           "header": "グループ初期表示",
-          "width": 15,
         },
         {
           "group": "表示",
           "header": "機能の有効",
-          "width": 11,
         },
       ],
       "rows": [
@@ -706,32 +657,26 @@ exports[`フィールドのアクセス権 シート > 標準構成の出力が�
         {
           "group": "対象フィールド",
           "header": "フィールドコード",
-          "width": 26,
         },
         {
           "group": "対象",
           "header": "コード",
-          "width": 24,
         },
         {
           "group": "対象",
           "header": "種類",
-          "width": 16,
         },
         {
           "group": "対象",
           "header": "下位組織にも適用",
-          "width": 15,
         },
         {
           "group": "権限",
           "header": "閲覧",
-          "width": 7,
         },
         {
           "group": "権限",
           "header": "編集",
-          "width": 7,
         },
       ],
       "rows": [
@@ -773,32 +718,26 @@ exports[`プロセス管理 シート > 標準構成の出力が変化しない 
         {
           "group": "ステータス",
           "header": "No.",
-          "width": 6,
         },
         {
           "group": "ステータス",
           "header": "ステータス名",
-          "width": 26,
         },
         {
           "group": "作業者",
           "header": "指定方法",
-          "width": 12,
         },
         {
           "group": "作業者",
           "header": "コード",
-          "width": 24,
         },
         {
           "group": "作業者",
           "header": "種類",
-          "width": 16,
         },
         {
           "group": "作業者",
           "header": "下位組織にも適用",
-          "width": 15,
         },
       ],
       "rows": [
@@ -834,22 +773,18 @@ exports[`プロセス管理 シート > 標準構成の出力が変化しない 
         {
           "group": "アクション",
           "header": "アクション名",
-          "width": 26,
         },
         {
           "group": "ステータスの遷移",
           "header": "実行前",
-          "width": 22,
         },
         {
           "group": "ステータスの遷移",
           "header": "実行後",
-          "width": 22,
         },
         {
           "group": "実行できる条件",
           "header": "条件",
-          "width": 44,
         },
       ],
       "rows": [
@@ -874,47 +809,38 @@ exports[`ルックアップ情報 シート > 標準構成の出力が変化し�
         {
           "group": "ルックアップ",
           "header": "フィールドコード",
-          "width": 26,
         },
         {
           "group": "ルックアップ",
           "header": "コピー元アプリID",
-          "width": 16,
         },
         {
           "group": "ルックアップ",
           "header": "コピー元アプリコード",
-          "width": 22,
         },
         {
           "group": "ルックアップ",
           "header": "コピー元のフィールド",
-          "width": 24,
         },
         {
           "group": "コピーする値",
           "header": "種別",
-          "width": 18,
         },
         {
           "group": "コピーする値",
           "header": "コピー先フィールド",
-          "width": 26,
         },
         {
           "group": "コピーする値",
           "header": "コピー元フィールド",
-          "width": 26,
         },
         {
           "group": "取得条件",
           "header": "絞り込み",
-          "width": 40,
         },
         {
           "group": "取得条件",
           "header": "ソート",
-          "width": 24,
         },
       ],
       "rows": [
@@ -976,42 +902,34 @@ exports[`レコードのアクセス権 シート > 標準構成の出力が変�
         {
           "group": "対象レコード",
           "header": "No.",
-          "width": 6,
         },
         {
           "group": "対象レコード",
           "header": "絞り込み条件",
-          "width": 44,
         },
         {
           "group": "対象",
           "header": "コード",
-          "width": 24,
         },
         {
           "group": "対象",
           "header": "種類",
-          "width": 16,
         },
         {
           "group": "対象",
           "header": "下位組織にも適用",
-          "width": 15,
         },
         {
           "group": "権限",
           "header": "閲覧",
-          "width": 7,
         },
         {
           "group": "権限",
           "header": "編集",
-          "width": 7,
         },
         {
           "group": "権限",
           "header": "削除",
-          "width": 7,
         },
       ],
       "rows": [
@@ -1038,11 +956,9 @@ exports[`一般情報 シート > 標準構成の出力が変化しない 1`] = 
       "columns": [
         {
           "header": "項目",
-          "width": 22,
         },
         {
           "header": "値",
-          "width": 70,
         },
       ],
       "rows": [
@@ -1063,7 +979,6 @@ exports[`一般情報 シート > 標準構成の出力が変化しない 1`] = 
           "案件の進捗を管理するアプリ",
         ],
       ],
-      "title": "一般情報",
     },
   ],
 }
@@ -1077,37 +992,30 @@ exports[`一覧 シート > 標準構成の出力が変化しない 1`] = `
         {
           "group": "一覧",
           "header": "一覧名",
-          "width": 24,
         },
         {
           "group": "一覧",
           "header": "一覧ID",
-          "width": 10,
         },
         {
           "group": "一覧",
           "header": "No.",
-          "width": 6,
         },
         {
           "group": "一覧",
           "header": "タイプ",
-          "width": 14,
         },
         {
           "group": "表示するフィールド",
           "header": "フィールド",
-          "width": 28,
         },
         {
           "group": "絞り込みとソート",
           "header": "絞り込み",
-          "width": 40,
         },
         {
           "group": "絞り込みとソート",
           "header": "ソート",
-          "width": 26,
         },
       ],
       "rows": [
@@ -1161,42 +1069,34 @@ exports[`関連レコード情報 シート > 標準構成の出力が変化し�
         {
           "group": "関連レコード",
           "header": "フィールドコード",
-          "width": 26,
         },
         {
           "group": "関連レコード",
           "header": "参照先アプリID",
-          "width": 16,
         },
         {
           "group": "関連レコード",
           "header": "参照先アプリコード",
-          "width": 22,
         },
         {
           "group": "表示するレコードの条件",
           "header": "フィールド",
-          "width": 24,
         },
         {
           "group": "表示するレコードの条件",
           "header": "参照先のフィールド",
-          "width": 26,
         },
         {
           "group": "表示するフィールド",
           "header": "フィールド",
-          "width": 26,
         },
         {
           "group": "絞り込みとソート",
           "header": "絞り込み",
-          "width": 40,
         },
         {
           "group": "絞り込みとソート",
           "header": "ソート",
-          "width": 24,
         },
       ],
       "rows": [

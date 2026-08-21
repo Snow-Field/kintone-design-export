@@ -11,15 +11,15 @@ type Lookup = {
 };
 
 const COLUMNS: ColumnDef[] = [
-  { group: 'ルックアップ', header: 'フィールドコード', width: 26 },
-  { group: 'ルックアップ', header: 'コピー元アプリID', width: 16 },
-  { group: 'ルックアップ', header: 'コピー元アプリコード', width: 22 },
-  { group: 'ルックアップ', header: 'コピー元のフィールド', width: 24 },
-  { group: 'コピーする値', header: '種別', width: 18 },
-  { group: 'コピーする値', header: 'コピー先フィールド', width: 26 },
-  { group: 'コピーする値', header: 'コピー元フィールド', width: 26 },
-  { group: '取得条件', header: '絞り込み', width: 40 },
-  { group: '取得条件', header: 'ソート', width: 24 },
+  { group: 'ルックアップ', header: 'フィールドコード' },
+  { group: 'ルックアップ', header: 'コピー元アプリID' },
+  { group: 'ルックアップ', header: 'コピー元アプリコード' },
+  { group: 'ルックアップ', header: 'コピー元のフィールド' },
+  { group: 'コピーする値', header: '種別' },
+  { group: 'コピーする値', header: 'コピー先フィールド' },
+  { group: 'コピーする値', header: 'コピー元フィールド' },
+  { group: '取得条件', header: '絞り込み' },
+  { group: '取得条件', header: 'ソート' },
 ];
 
 export function buildLookupSheet(data: AppSettings): SheetResult {

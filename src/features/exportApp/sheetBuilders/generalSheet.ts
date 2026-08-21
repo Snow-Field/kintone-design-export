@@ -4,11 +4,7 @@ export function buildGeneralSheet(data: AppSettings): SheetResult {
   return {
     blocks: [
       {
-        title: '一般情報',
-        columns: [
-          { header: '項目', width: 22 },
-          { header: '値', width: 70 },
-        ],
+        columns: [{ header: '項目' }, { header: '値' }],
         rows: [
           ['ドメイン', location.hostname],
           ['アプリ名', data.app.name],

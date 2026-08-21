@@ -67,12 +67,11 @@ describe.each(builders)('%s シート', (_name, build) => {
     expect(build(createMockAppSettings()).blocks.length).toBeGreaterThan(0);
   });
 
-  it('各列に見出しと幅が定義されている', () => {
+  it('各列に見出しが定義されている', () => {
     for (const block of build(createMockAppSettings()).blocks) {
       expect(block.columns.length).toBeGreaterThan(0);
       for (const col of block.columns) {
         expect(col.header).not.toBe('');
-        expect(col.width).toBeGreaterThan(0);
       }
     }
   });

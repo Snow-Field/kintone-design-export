@@ -1,5 +1,5 @@
 import { Workbook, type Borders, type Fill, type Worksheet } from 'exceljs';
-import type { ColumnDef, SheetBlock, SheetResult } from '@/types';
+import type { ColumnDef, ExcelCell, SheetBlock, SheetResult } from '@/types';
 import { THEME } from './theme';
 
 export const SHEET_NAMES = {
@@ -15,14 +15,21 @@ export const SHEET_NAMES = {
   PROCESS: 'プロセス管理',
 } as const;
 
-/** A列は余白として空けるため、表は B 列から始まる */
-const FIRST_COLUMN = 2;
-/** 表の開始行。1行目は余白として空ける */
-const FIRST_ROW = 2;
+/** 表は左上から始める */
+const FIRST_COLUMN = 1;
+const FIRST_ROW = 1;
 /** 表と表の間に空ける行数 */
 const BLOCK_GAP = 2;
-/** A列の幅 */
-const MARGIN_COLUMN_WIDTH = 2;
+
+/** 列幅に加える余裕。Excel の自動調整も文字幅ちょうどではなく少し広い */
+const WIDTH_PADDING = 1;
+/** 列幅の下限と、Excel が扱える上限 */
+const MIN_WIDTH = 3;
+const MAX_WIDTH = 255;
+
+/** 全角として数える文字の範囲 */
+const FULL_WIDTH_CHAR =
+  /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︐-﹯＀-｠￠-￦]/;
 
 const BORDER: Partial<Borders> = {
   top: { style: 'thin', color: { argb: THEME.color.border } },
@@ -37,6 +44,48 @@ function solidFill(argb: string): Fill {
 
 export function createWorkbook(): Workbook {
   return new Workbook();
+}
+
+/**
+ * セルの表示幅を Excel の文字数単位で数える。
+ * 全角は半角2文字分にあたる。セル内改行がある場合は最も長い行で測る。
+ */
+export function displayWidth(value: ExcelCell): number {
+  if (value === null || value === undefined) return 0;
+  return String(value)
+    .split('\n')
+    .reduce((max, line) => {
+      let width = 0;
+      for (const char of line) width += FULL_WIDTH_CHAR.test(char) ? 2 : 1;
+      return Math.max(max, width);
+    }, 0);
+}
+
+/**
+ * 列幅を内容から決める。
+ *
+ * xlsx には「開いたときに自動調整せよ」という指定が無く、Excel の自動調整は
+ * 表示時に実測して決まる。そのため見出しと値の表示幅を測って列幅に充てる。
+ * 上段の見出しは結合されるため幅の対象にしない（Excel の自動調整も同じ）。
+ */
+function computeColumnWidths(blocks: SheetBlock[]): number[] {
+  const widths: number[] = [];
+  const extend = (index: number, width: number) => {
+    widths[index] = Math.max(widths[index] ?? 0, width);
+  };
+
+  for (const block of blocks) {
+    block.columns.forEach((column, index) =>
+      extend(index, displayWidth(column.header)),
+    );
+    for (const row of block.rows) {
+      row.forEach((value, index) => extend(index, displayWidth(value)));
+    }
+  }
+
+  return widths.map((width) =>
+    Math.min(Math.max(width + WIDTH_PADDING, MIN_WIDTH), MAX_WIDTH),
+  );
 }
 
 /** 隣り合う同じ group をひとまとまりとして、結合する範囲を求める */
@@ -119,11 +168,7 @@ function writeHeader(
     };
     cell.fill = solidFill(THEME.color.headerBg);
     cell.border = BORDER;
-    cell.alignment = {
-      horizontal: 'center',
-      vertical: 'middle',
-      wrapText: true,
-    };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
   });
 
   return headerRow + 1;
@@ -140,7 +185,7 @@ function writeRows(ws: Worksheet, startRow: number, block: SheetBlock): number {
       if (value !== undefined && value !== null) cell.value = value;
       cell.font = { name: THEME.font.name, size: THEME.font.size };
       cell.border = BORDER;
-      cell.alignment = { vertical: 'top', wrapText: true };
+      cell.alignment = { vertical: 'top' };
       if (striped) cell.fill = solidFill(THEME.color.stripeBg);
     });
   });
@@ -153,7 +198,6 @@ export function addStyledSheet(
   { blocks }: SheetResult,
 ) {
   const ws = wb.addWorksheet(name);
-  ws.getColumn(1).width = MARGIN_COLUMN_WIDTH;
 
   let row = FIRST_ROW;
   let firstHeaderRow: number | undefined;
@@ -173,13 +217,8 @@ export function addStyledSheet(
     row = writeRows(ws, bodyStart, block);
   });
 
-  // 列幅は最も列数の多い表に合わせる
-  const widest = blocks.reduce<ColumnDef[]>(
-    (max, block) => (block.columns.length > max.length ? block.columns : max),
-    [],
-  );
-  widest.forEach((column, index) => {
-    ws.getColumn(FIRST_COLUMN + index).width = column.width;
+  computeColumnWidths(blocks).forEach((width, index) => {
+    ws.getColumn(FIRST_COLUMN + index).width = width;
   });
 
   // 見出しまでを固定する。2段見出しなら2行とも固定される

@@ -2,19 +2,19 @@ import type { ColumnDef, ExcelData, SheetResult, AppSettings } from '@/types';
 import { checkMark } from '@/utils/format';
 
 const STATUS_COLUMNS: ColumnDef[] = [
-  { group: 'ステータス', header: 'No.', width: 6 },
-  { group: 'ステータス', header: 'ステータス名', width: 26 },
-  { group: '作業者', header: '指定方法', width: 12 },
-  { group: '作業者', header: 'コード', width: 24 },
-  { group: '作業者', header: '種類', width: 16 },
-  { group: '作業者', header: '下位組織にも適用', width: 15 },
+  { group: 'ステータス', header: 'No.' },
+  { group: 'ステータス', header: 'ステータス名' },
+  { group: '作業者', header: '指定方法' },
+  { group: '作業者', header: 'コード' },
+  { group: '作業者', header: '種類' },
+  { group: '作業者', header: '下位組織にも適用' },
 ];
 
 const ACTION_COLUMNS: ColumnDef[] = [
-  { group: 'アクション', header: 'アクション名', width: 26 },
-  { group: 'ステータスの遷移', header: '実行前', width: 22 },
-  { group: 'ステータスの遷移', header: '実行後', width: 22 },
-  { group: '実行できる条件', header: '条件', width: 44 },
+  { group: 'アクション', header: 'アクション名' },
+  { group: 'ステータスの遷移', header: '実行前' },
+  { group: 'ステータスの遷移', header: '実行後' },
+  { group: '実行できる条件', header: '条件' },
 ];
 
 export function buildProcessSheet(data: AppSettings): SheetResult {

@@ -14,8 +14,6 @@ export type ColumnDef = {
   group?: string;
   /** 下段の見出し */
   header: string;
-  /** 列幅（Excel の文字数単位） */
-  width: number;
 };
 
 /**

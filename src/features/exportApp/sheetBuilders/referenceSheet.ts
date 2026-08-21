@@ -10,14 +10,14 @@ type ReferenceTable = {
 };
 
 const COLUMNS: ColumnDef[] = [
-  { group: '関連レコード', header: 'フィールドコード', width: 26 },
-  { group: '関連レコード', header: '参照先アプリID', width: 16 },
-  { group: '関連レコード', header: '参照先アプリコード', width: 22 },
-  { group: '表示するレコードの条件', header: 'フィールド', width: 24 },
-  { group: '表示するレコードの条件', header: '参照先のフィールド', width: 26 },
-  { group: '表示するフィールド', header: 'フィールド', width: 26 },
-  { group: '絞り込みとソート', header: '絞り込み', width: 40 },
-  { group: '絞り込みとソート', header: 'ソート', width: 24 },
+  { group: '関連レコード', header: 'フィールドコード' },
+  { group: '関連レコード', header: '参照先アプリID' },
+  { group: '関連レコード', header: '参照先アプリコード' },
+  { group: '表示するレコードの条件', header: 'フィールド' },
+  { group: '表示するレコードの条件', header: '参照先のフィールド' },
+  { group: '表示するフィールド', header: 'フィールド' },
+  { group: '絞り込みとソート', header: '絞り込み' },
+  { group: '絞り込みとソート', header: 'ソート' },
 ];
 
 export function buildReferenceSheet(data: AppSettings): SheetResult {
