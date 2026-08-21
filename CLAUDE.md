@@ -34,13 +34,15 @@ npm run format:check  # prettier --check .
 ```
 popup (React)                content script (kintone ページ内)
 src/app/popup/App.tsx  ──►  src/features/exportApp/content.ts
-  chrome.tabs.sendMessage       ├─ URL から /k/(\d+) で appId 抽出
-  ({action:"START_EXPORT"})     ├─ fetchAllSettings(appId)   … src/api/kintoneClient.ts
+  chrome.tabs.sendMessage       ├─ parseAppLocation でアプリの所在を解決
+  ({action:"START_EXPORT"})     ├─ fetchAllSettings(appLocation) … src/api/kintoneClient.ts
                                 ├─ sheetBuilders 各関数で行データ生成
                                 ├─ addStyledSheet でスタイル適用    … src/utils/excel.ts
-                                └─ saveExcelFile で Blob ダウンロード
+                                └─ await saveExcelFile で Blob ダウンロード
                           ◄──  {success, message?} を sendResponse
 ```
+
+- Excel の生成には **ExcelJS** を使う。`saveExcelFile` は `wb.xlsx.writeBuffer()` を待つため **非同期**で、呼び出し側で `await` が要る。
 
 - popup は UI と結果表示のみ。**kintone API 呼び出しは必ず content script 側**で行う。`KintoneRestAPIClient` を引数なしで生成しており、kintone ページのオリジン・セッションクッキーに依存しているため、popup / background から呼んでも認証が通らない。
 - popup 側では `Could not establish connection` を「kintoneのページで実行してください」に読み替えている（content script 未注入のタブ）。
