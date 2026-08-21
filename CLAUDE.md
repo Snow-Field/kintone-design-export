@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 kintone アプリの設計情報を Excel（.xlsx）として出力する Chrome 拡張機能（Manifest V3）。
 React + TypeScript + Vite + @crxjs/vite-plugin で構成。詳細な機能仕様は `README.md` を参照。
 
+設計判断の経緯・確定した前提・進捗は `docs/` にある。**Excel の出力仕様を変更する前に `docs/ai/decisions/excel-output.md` と `docs/constraints.md` を読むこと。**過去に検討して却下した選択肢が記録されている。
+
 ## コマンド
 
 ```bash
