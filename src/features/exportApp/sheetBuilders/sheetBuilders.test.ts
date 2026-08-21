@@ -116,13 +116,28 @@ describe('buildFieldSheet', () => {
     expect(types).toContain('HR');
   });
 
-  it('現状の仕様: サブテーブル内のフィールドは行として出力されない', () => {
+  it('サブテーブル内のフィールドをテーブル名付きで出力する', () => {
     // kintone の getFormFields は明細内フィールドを properties 直下ではなく
-    // サブテーブルの fields 配下に返すため、コードで引いても解決できない。
-    // 現状の挙動を固定するテストであり、望ましい仕様を表すものではない。
+    // サブテーブルの fields 配下に返すため、そちらから解決する必要がある。
     const { rows } = buildFieldSheet(createMockAppSettings());
-    expect(rows.find((r) => r[1] === '商品名')).toBeUndefined();
-    expect(rows.find((r) => r[1] === '数量')).toBeUndefined();
+
+    const 商品名 = rows.find((r) => r[1] === '商品名');
+    expect(商品名?.[2]).toBe('商品名');
+    expect(商品名?.[3]).toBe('SINGLE_LINE_TEXT');
+    expect(商品名?.[5]).toBe('明細');
+    expect(商品名?.[8]).toBe('必須');
+
+    const 数量 = rows.find((r) => r[1] === '数量');
+    expect(数量?.[3]).toBe('NUMBER');
+    expect(数量?.[5]).toBe('明細');
+    expect(数量?.[14]).toBe('1');
+  });
+
+  it('サブテーブルの見出し行と明細内フィールドを重複させない', () => {
+    const { rows } = buildFieldSheet(createMockAppSettings());
+    const 明細行 = rows.filter((r) => r[1] === '明細');
+    expect(明細行).toHaveLength(1);
+    expect(明細行[0]?.[3]).toBe('SUBTABLE');
   });
 });
 

@@ -1,11 +1,18 @@
 import { KintoneRestAPIClient } from '@kintone/rest-api-client';
-import type { AppSettings, AppStatusResponse } from '../types';
+import type { AppLocation, AppSettings, AppStatusResponse } from '../types';
 
-const client = new KintoneRestAPIClient();
+/** ゲストスペースでは REST API のパスが /k/guest/{スペースID}/v1/... になる */
+function apiBasePath(guestSpaceId?: string): string {
+  return guestSpaceId ? `/k/guest/${guestSpaceId}/v1` : '/k/v1';
+}
 
 // プロセス管理をfetchで取得する関数
-async function fetchAppStatus(appId: string): Promise<AppStatusResponse> {
-  const url = `${location.origin}/k/v1/app/status.json?app=${appId}`;
+async function fetchAppStatus({
+  appId,
+  guestSpaceId,
+}: AppLocation): Promise<AppStatusResponse> {
+  const base = apiBasePath(guestSpaceId);
+  const url = `${location.origin}${base}/app/status.json?app=${appId}`;
   const res = await fetch(url, {
     headers: { 'X-Requested-With': 'XMLHttpRequest' },
   });
@@ -15,7 +22,12 @@ async function fetchAppStatus(appId: string): Promise<AppStatusResponse> {
   return res.json() as Promise<AppStatusResponse>;
 }
 
-export async function fetchAllSettings(appId: string): Promise<AppSettings> {
+export async function fetchAllSettings(
+  appLocation: AppLocation,
+): Promise<AppSettings> {
+  const { appId, guestSpaceId } = appLocation;
+  // guestSpaceId は実行時にしか決まらないため、ここでクライアントを生成する
+  const client = new KintoneRestAPIClient(guestSpaceId ? { guestSpaceId } : {});
   const p = { app: appId };
 
   const [
@@ -37,7 +49,7 @@ export async function fetchAllSettings(appId: string): Promise<AppSettings> {
     client.app.getAppAcl(p),
     client.app.getRecordAcl(p),
     client.app.getFieldAcl(p),
-    fetchAppStatus(appId),
+    fetchAppStatus(appLocation),
   ]);
 
   return {

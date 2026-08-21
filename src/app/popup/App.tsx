@@ -24,7 +24,7 @@ export const App = () => {
         active: true,
         currentWindow: true,
       });
-      if (!tab.id) throw new Error('タブが見つかりません');
+      if (!tab?.id) throw new Error('タブが見つかりません');
 
       const response = await chrome.tabs.sendMessage(tab.id, {
         action: 'START_EXPORT',

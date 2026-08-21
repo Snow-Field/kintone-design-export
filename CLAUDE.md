@@ -23,7 +23,7 @@ npm run format:check  # prettier --check .
 - スナップショットを意図的に更新する場合は `npx vitest run -u`。**出力仕様を変えたつもりが無いのに差分が出た場合は、更新せず原因を確認する。**
 - 拡張機能として動かす場合は `npm run build` 後、`chrome://extensions` で「パッケージ化されていない拡張機能を読み込む」から `dist/` を読み込む。
 - 拡張機能のバージョンは `public/manifest.json` の `version` が実体。`package.json` の `version` は使われていない。
-- `src/components/ui/button.tsx` に `react-refresh/only-export-components` の lint エラーが1件残っている（`buttonVariants` を同一ファイルから export しているため）。既知の未修正項目で、新規に発生させたものではない。
+- `build` / `test` / `lint` / `format:check` / `audit` はいずれもエラー0の状態を維持している。lint エラーを残したまま次の作業に進まない。
 
 ## アーキテクチャ
 
@@ -77,7 +77,7 @@ src/app/popup/App.tsx  ──►  src/features/exportApp/content.ts
 - 実行環境は `node`。一般情報シートが `location.hostname` を参照するため、テスト側で `vi.stubGlobal("location", ...)` を行っている。ブラウザ API に依存する処理を増やす場合は同様にスタブする。
 - `vitest.config.ts` は `vite.config.ts` とは別に用意している。crxjs プラグインをテスト実行時に読み込ませないため。
 
-**既知の未修正の挙動**: サブテーブル内のフィールドは「フィールド」シートに出力されない。`buildFieldSheet` が `data.fields.properties[l.code]` で解決を試みるが、明細内フィールドはそこに存在しないため `if (!f) return;` でスキップされる。現状の挙動としてテストで固定してある。
+**ゲストスペース**: アプリの所在は `parseAppLocation`（`src/utils/kintoneUrl.ts`）が URL から解決し、`AppLocation`（`appId` と任意の `guestSpaceId`）として扱う。ゲストスペースでは REST API のパスが `/k/guest/<スペースID>/v1/...` に変わるため、`KintoneRestAPIClient` には `guestSpaceId` を渡し、`app/status.json` の生 fetch も `apiBasePath` でパスを切り替えている。**URL からアプリを特定する処理を増やす場合は正規表現を直書きせず `parseAppLocation` を使うこと。**
 
 ### 型の扱い
 
