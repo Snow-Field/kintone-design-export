@@ -1,47 +1,63 @@
-import type { ExcelData, SheetResult, AppSettings } from '@/types';
+import type { ColumnDef, ExcelData, SheetResult, AppSettings } from '@/types';
 import { getFieldProp } from '@/utils/field';
 
+type Lookup = {
+  relatedApp: { app: string; code: string };
+  relatedKeyField: string;
+  fieldMappings: Array<{ field: string; relatedField: string }>;
+  lookupPickerFields: string[];
+  filterCond: string;
+  sort: string;
+};
+
+const COLUMNS: ColumnDef[] = [
+  { group: 'ルックアップ', header: 'フィールドコード', width: 26 },
+  { group: 'ルックアップ', header: 'コピー元アプリID', width: 16 },
+  { group: 'ルックアップ', header: 'コピー元アプリコード', width: 22 },
+  { group: 'ルックアップ', header: 'コピー元のフィールド', width: 24 },
+  { group: 'コピーする値', header: '種別', width: 18 },
+  { group: 'コピーする値', header: 'コピー先フィールド', width: 26 },
+  { group: 'コピーする値', header: 'コピー元フィールド', width: 26 },
+  { group: '取得条件', header: '絞り込み', width: 40 },
+  { group: '取得条件', header: 'ソート', width: 24 },
+];
+
 export function buildLookupSheet(data: AppSettings): SheetResult {
-  const rows: ExcelData = [
-    [],
-    [
-      '',
-      'フィールドコード',
-      'コピー元アプリID',
-      'コピー元アプリコード',
-      'コピー元のフィールド',
-      'ほかのフィールドのコピー',
-      '表示フィールド',
-      '絞り込み',
-      'ソート',
-    ],
-  ];
+  const rows: ExcelData = [];
 
   Object.values(data.fields.properties).forEach((f) => {
-    const lookup = getFieldProp(f, 'lookup');
+    const lookup = getFieldProp(f, 'lookup') as Lookup | undefined;
     if (!lookup) return;
-    const l = lookup as {
-      relatedApp: { app: string; code: string };
-      relatedKeyField: string;
-      fieldMappings: Array<{ field: string; relatedField: string }>;
-      lookupPickerFields: string[];
-      filterCond: string;
-      sort: string;
-    };
-    const mappings = l.fieldMappings
-      .map((m) => `${m.field}->${m.relatedField}`)
-      .join(',');
-    rows.push([
-      '',
-      f.code,
-      l.relatedApp.app,
-      l.relatedApp.code,
-      l.relatedKeyField,
-      mappings,
-      l.lookupPickerFields.join(','),
-      l.filterCond,
-      l.sort,
-    ]);
+
+    // 1件も紐づけが無い場合でもルックアップの存在は示す
+    const entries: Array<[string, string, string]> = [
+      ...lookup.fieldMappings.map((m): [string, string, string] => [
+        'ほかのフィールドのコピー',
+        m.field,
+        m.relatedField,
+      ]),
+      ...lookup.lookupPickerFields.map((field): [string, string, string] => [
+        '表示フィールド',
+        '',
+        field,
+      ]),
+    ];
+    if (entries.length === 0) entries.push(['', '', '']);
+
+    entries.forEach(([kind, dest, src]) => {
+      rows.push([
+        f.code,
+        lookup.relatedApp.app,
+        lookup.relatedApp.code,
+        lookup.relatedKeyField,
+        kind,
+        dest,
+        src,
+        lookup.filterCond,
+        lookup.sort,
+      ]);
+    });
   });
-  return { rows, headerIndex: [1] };
+
+  return { blocks: [{ columns: COLUMNS, rows }] };
 }

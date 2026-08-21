@@ -11,7 +11,6 @@ import { parseAppLocation } from '@/utils/kintoneUrl';
 import {
   buildGeneralSheet,
   buildFieldSheet,
-  buildCalcSheet,
   buildActionSheet,
   buildLookupSheet,
   buildReferenceSheet,
@@ -25,7 +24,6 @@ import {
 const sheetDefinitions = [
   { name: SHEET_NAMES.GENERAL, builder: buildGeneralSheet },
   { name: SHEET_NAMES.FIELD, builder: buildFieldSheet },
-  { name: SHEET_NAMES.CALC, builder: buildCalcSheet },
   { name: SHEET_NAMES.ACTION, builder: buildActionSheet },
   { name: SHEET_NAMES.LOOKUP, builder: buildLookupSheet },
   { name: SHEET_NAMES.REFERENCE, builder: buildReferenceSheet },

@@ -2,7 +2,7 @@
 
 出力される .xlsx の構成・体裁を定める。判断の理由は `docs/ai/decisions/excel-output.md` を参照。
 
-この仕様は刷新後の目標であり、実装の進捗は `docs/status.md` を参照。
+実装の進捗と未確認の事項は `docs/status.md` を参照。
 
 ## 目次
 

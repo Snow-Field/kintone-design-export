@@ -50,32 +50,37 @@ src/app/popup/App.tsx  ──►  src/features/exportApp/content.ts
 
 ### シート生成の規約
 
-各シートビルダーは `src/features/exportApp/sheetBuilders/*.ts` に 1 ファイル 1 関数で置き、`SheetResult`（`{ rows: ExcelCell[][]; headerIndex: number[] }`）を返す。
+各シートビルダーは `src/features/exportApp/sheetBuilders/*.ts` に 1 ファイル 1 関数で置き、`SheetResult`（`{ blocks: SheetBlock[] }`）を返す。`SheetBlock` は 1 つの表を表し、`title` / `columns` / `rows` を持つ。プロセス管理のように 1 シートへ表を 2 つ並べる場合は `blocks` を複数返す。
 
-行データの共通ルール:
+**シートビルダーは行データだけを返し、見た目には関与しない。** 見出し・罫線・配色・A 列の余白・列幅の適用はすべて `addStyledSheet`（`src/utils/excel.ts`）が行う。
 
-- 行 0 は空行、ヘッダー行は行 1（`headerIndex: [1]`）が基本。`processSheet.ts` のようにヘッダーが複数ある場合は `headerIndex` に全て列挙する。
-- **各行の先頭セル（A 列）は必ず空文字**。A 列は余白扱いで、`addStyledSheet` は `C === 0` のセルにスタイルを適用しない。
-- 一般情報シートだけ `applyGeneralInfoStyle` で B1（タイトル）と B3〜B7 に個別スタイルを当てている（`src/utils/excel.ts`）。
+- `rows` の各行は `columns` と同じ並び。**A 列の余白は描画側が付けるので、行の先頭に空文字を入れない。**
+- `columns[].group` は上段の見出し。隣り合う列で同じ値なら結合される。1 列でも `group` があれば見出しは 2 段になる。
+- 見出し行は自動で固定される。表が 1 つだけのシートにはオートフィルタも設定される（Excel の仕様上シートあたり 1 つまでのため、表が複数のシートには付かない）。
+- 列幅は **Excel の文字数単位**（ピクセルではない）。
 
 値の整形は既存シートの表記に合わせる:
 
-- 真偽値のチェック表現: `■` / `□`（`appAclSheet.ts` の `flag`）
-- 複数値の連結: `,`、フィールドマッピング: `src->dest`、セル内改行: `\n`
-- エンティティの種別区切りは**全角スラッシュ `／`**（半角だと Excel 上で見づらいため意図的に変更されている）
+- 真偽値は `■` / `□`（`src/utils/format.ts` の `checkMark`）。未設定と `false` を区別したい列は、未設定なら空文字にする。
+- kintone REST API の値は**日本語に変換せずそのまま出す**（`SINGLE_LINE_TEXT`、`AFTER`、`GROUP` など）。理由は `docs/ai/decisions/excel-output.md` の D-04。
+- 1 対多の紐づけ（マッピング・表示フィールドなど）は**行方向に展開**し、対応元と対応先を別の列に置く（D-02）。単一フィールドが複数値を持つだけの属性（選択肢・対象ユーザー）は列内でカンマ区切り（D-03）。
 
 ### 新しいシートを追加する手順
 
 1. `src/utils/excel.ts` の `SHEET_NAMES` にシート名を追加
-2. 同ファイルの `COL_WIDTHS` に列幅（px 配列、先頭は A 列ぶんの `13`）を追加
-3. `sheetBuilders/` に `buildXxxSheet(data: AppSettings): SheetResult` を作成
-4. `sheetBuilders/index.ts` で re-export
-5. `content.ts` の `sheetDefinitions` に `{ name, builder }` を登録（この配列の順序＝シートの並び順）
-6. `sheetBuilders.test.ts` の `builders` 配列に追加し、`npm test` でスナップショットを生成する
+2. `sheetBuilders/` に `buildXxxSheet(data: AppSettings): SheetResult` を作成（`columns` に見出しと幅を定義する）
+3. `sheetBuilders/index.ts` で re-export
+4. `content.ts` の `sheetDefinitions` に `{ name, builder }` を登録（この配列の順序＝シートの並び順）
+5. `sheetBuilders.test.ts` の `builders` 配列に追加し、`npm test` でスナップショットを生成する
+
+### 配色を変える
+
+`src/utils/theme.ts` の値だけを差し替える。色は ARGB 8 桁。**見出しの背景色を変えるときは文字色とのコントラスト比を 4.5:1 以上に保つこと**（現在の値と根拠は `docs/specs/excel-layout.md`）。
 
 ### テスト
 
 - `src/features/exportApp/sheetBuilders/sheetBuilders.test.ts` に集約。sheetBuilder は `AppSettings` を受け取り行データを返す純粋関数なので、モックを渡すだけで検証できる。
+- **見出しの固定・オートフィルタ・セル結合・配色は行データのスナップショットでは検出できない。** これらは `src/utils/excel.test.ts` が、生成した .xlsx を読み戻して検証している。描画の挙動を変えたらこちらも確認する。
 - モックは `src/test/fixtures/appSettings.ts`。**kintone REST API の実レスポンス構造に忠実に作ること**（例: サブテーブル内のフィールドは `properties` 直下ではなく `properties[サブテーブルコード].fields` に入る）。構造を崩すとテストが通っても実環境で壊れる。
 - 型は fixture 内の `asAppSettings` で一度だけキャストする。テスト本体ではキャストしない。
 - 実行環境は `node`。一般情報シートが `location.hostname` を参照するため、テスト側で `vi.stubGlobal("location", ...)` を行っている。ブラウザ API に依存する処理を増やす場合は同様にスタブする。
