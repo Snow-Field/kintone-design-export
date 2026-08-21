@@ -66,6 +66,6 @@ kintoneアプリの管理・引き継ぎ・ドキュメント整備において�
 |---|---|
 | フレームワーク | React + TypeScript |
 | ビルドツール | Vite |
-| Excel出力 | xlsx-js-style |
+| Excel出力 | ExcelJS |
 | kintone API | @kintone/rest-api-client |
 | スタイル | Tailwind CSS |

@@ -1,7 +1,11 @@
-import * as XLSX from 'xlsx-js-style';
 import { fetchAllSettings } from '@/api/kintoneClient';
 import { getFormattedDate } from '@/utils/date';
-import { addStyledSheet, saveExcelFile, SHEET_NAMES } from '@/utils/excel';
+import {
+  addStyledSheet,
+  createWorkbook,
+  saveExcelFile,
+  SHEET_NAMES,
+} from '@/utils/excel';
 import { getErrorMessage } from '@/utils/error';
 import { parseAppLocation } from '@/utils/kintoneUrl';
 import {
@@ -47,13 +51,13 @@ async function exportAppDesign() {
 
   try {
     const data = await fetchAllSettings(appLocation);
-    const wb = XLSX.utils.book_new();
+    const wb = createWorkbook();
 
     sheetDefinitions.forEach(({ name, builder }) => {
       addStyledSheet(wb, name, builder(data));
     });
 
-    saveExcelFile(
+    await saveExcelFile(
       wb,
       `${location.hostname.split('.')[0]}-${appLocation.appId}-${getFormattedDate()}.xlsx`,
     );
