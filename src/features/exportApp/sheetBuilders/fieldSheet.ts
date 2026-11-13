@@ -4,7 +4,12 @@ import type {
 } from '@kintone/rest-api-client';
 import type { ColumnDef, ExcelData, SheetResult, AppSettings } from '@/types';
 import { getFieldProp } from '@/utils/field';
-import { checkMark, joinValues, NOT_APPLICABLE } from '@/utils/format';
+import {
+  checkMark,
+  formatEntity,
+  joinValues,
+  NOT_APPLICABLE,
+} from '@/utils/format';
 
 /** フィールドプロパティの型エイリアス */
 type FieldProperty = KintoneFormFieldProperty.OneOf;
@@ -140,12 +145,14 @@ function optionLabels(field: FieldProperty): string {
   );
 }
 
-/** 選択肢に指定されたユーザー・グループ・組織のコード */
-function entityCodes(field: FieldProperty): string {
+/** 選択肢に指定されたユーザー・グループ・組織を `種類:コード` で並べる */
+function entityList(field: FieldProperty): string {
   const entities = getFieldProp(field, 'entities');
   if (!Array.isArray(entities)) return NOT_APPLICABLE;
   return joinValues(
-    (entities as Array<{ code: string }>).map((entity) => entity.code),
+    (entities as Array<{ type: string; code: string }>).map((entity) =>
+      formatEntity(entity),
+    ),
   );
 }
 
@@ -176,6 +183,18 @@ function flag(field: FieldProperty, key: string, invert = false): string {
   const value = getFieldProp(field, key);
   if (value === undefined) return NOT_APPLICABLE;
   return checkMark(invert ? !value : value);
+}
+
+/**
+ * 「計算式を表示」。hideExpression を持たない型は -、
+ * 計算式が設定されていなければ空欄、設定されていればチェック記号にする
+ */
+function showExpression(field: FieldProperty): string {
+  const hideExpression = getFieldProp(field, 'hideExpression');
+  if (hideExpression === undefined) return NOT_APPLICABLE;
+  const expression = getFieldProp(field, 'expression');
+  if (!expression) return '';
+  return checkMark(!hideExpression);
 }
 
 /** 真偽値の属性を2択の語にする */
@@ -234,10 +253,9 @@ export function buildFieldSheet(data: AppSettings): SheetResult {
       defaultValue(f),
       optionLabels(f),
       attr(f, 'align'),
-      entityCodes(f),
+      entityList(f),
       attr(f, 'expression'),
-      // 「計算式を表示」は API では「隠す」で返る
-      flag(f, 'hideExpression', true),
+      showExpression(f),
       attr(f, 'format'),
       attr(f, 'displayScale'),
       attr(f, 'unit'),

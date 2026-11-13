@@ -124,6 +124,12 @@ describe('buildFieldSheet', () => {
     expect(valueOf('案件名', '計算式')).toBe('');
   });
 
+  it('計算式を表示は計算式が無ければ空欄にする', () => {
+    expect(valueOf('案件名', '計算式を表示')).toBe('');
+    expect(valueOf('税込金額', '計算式を表示')).toBe('■');
+    expect(valueOf('金額', '計算式を表示')).toBe('-');
+  });
+
   it('単位と単位の位置を分けて出力する', () => {
     expect(valueOf('金額', '単位')).toBe('円');
     expect(valueOf('金額', '単位の位置')).toBe('AFTER');
@@ -159,8 +165,8 @@ describe('buildFieldSheet', () => {
     }
   });
 
-  it('対象ユーザーをカンマ区切りにする', () => {
-    expect(valueOf('担当者', '対象ユーザー')).toBe('sales,user1');
+  it('対象ユーザーを種類:コードのカンマ区切りにする', () => {
+    expect(valueOf('担当者', '対象ユーザー')).toBe('GROUP:sales,USER:user1');
   });
 
   it('配列のデフォルト値をコードの連結にする', () => {
