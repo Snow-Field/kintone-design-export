@@ -67,12 +67,11 @@ describe.each(builders)('%s シート', (_name, build) => {
     expect(build(createMockAppSettings()).blocks.length).toBeGreaterThan(0);
   });
 
-  it('各列に見出しと幅が定義されている', () => {
+  it('各列に見出しが定義されている', () => {
     for (const block of build(createMockAppSettings()).blocks) {
       expect(block.columns.length).toBeGreaterThan(0);
       for (const col of block.columns) {
         expect(col.header).not.toBe('');
-        expect(col.width).toBeGreaterThan(0);
       }
     }
   });
@@ -282,10 +281,9 @@ describe('buildProcessSheet', () => {
   it('ステータスとアクションを別々の表にする', () => {
     const { blocks } = result();
     expect(blocks).toHaveLength(2);
-    expect(blocks.map((b) => b.title)).toEqual([
-      'ステータスと作業者',
-      'アクション',
-    ]);
+    // 表題を持たないため、見出しでどちらの表かが分かるようにしている
+    expect(blocks[0]?.columns.map((c) => c.header)).toContain('ステータス名');
+    expect(blocks[1]?.columns.map((c) => c.header)).toContain('アクション名');
   });
 
   it('作業者を1件ずつ行に展開する', () => {

@@ -1,5 +1,5 @@
 import { Workbook, type Borders, type Fill, type Worksheet } from 'exceljs';
-import type { ColumnDef, SheetBlock, SheetResult } from '@/types';
+import type { ColumnDef, ExcelCell, SheetBlock, SheetResult } from '@/types';
 import { THEME } from './theme';
 
 export const SHEET_NAMES = {
@@ -15,14 +15,30 @@ export const SHEET_NAMES = {
   PROCESS: 'プロセス管理',
 } as const;
 
-/** A列は余白として空けるため、表は B 列から始まる */
-const FIRST_COLUMN = 2;
-/** 表の開始行。1行目は余白として空ける */
-const FIRST_ROW = 2;
-/** 表と表の間に空ける行数 */
-const BLOCK_GAP = 2;
-/** A列の幅 */
-const MARGIN_COLUMN_WIDTH = 2;
+/** 表は左上から始める */
+const FIRST_COLUMN = 1;
+const FIRST_ROW = 1;
+/** 表と表の間に空ける列数 */
+const BLOCK_GAP_COLUMNS = 1;
+/** 表と表の間に挟む列の幅 */
+const GAP_COLUMN_WIDTH = 2;
+
+/** 列幅に加える余裕。Excel の自動調整も文字幅ちょうどではなく少し広い */
+const WIDTH_PADDING = 2;
+/** オートフィルタのボタンが見出しに重ならないよう確保する幅 */
+const FILTER_BUTTON_WIDTH = 3;
+/** 列幅の下限と、Excel が扱える上限 */
+const MIN_WIDTH = 3;
+const MAX_WIDTH = 255;
+/**
+ * ExcelJS の既定列幅。この値をそのまま指定すると「幅の指定なし」と見なされ
+ * xlsx に記録されず、Excel 側の既定幅（9 より狭い）で表示されてしまう。
+ */
+const EXCELJS_DEFAULT_WIDTH = 9;
+
+/** 全角として数える文字の範囲 */
+const FULL_WIDTH_CHAR =
+  /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︐-﹯＀-｠￠-￦]/;
 
 const BORDER: Partial<Borders> = {
   top: { style: 'thin', color: { argb: THEME.color.border } },
@@ -37,6 +53,84 @@ function solidFill(argb: string): Fill {
 
 export function createWorkbook(): Workbook {
   return new Workbook();
+}
+
+/**
+ * 全角文字1つぶんの幅。
+ *
+ * Excel の列幅は「標準フォントの数字1文字ぶん」を単位としており、日本語
+ * フォントの全角文字はその2倍よりわずかに広い。単純に2で数えると文字数が
+ * 多い列ほど不足が積み上がるため、実際の字幅に近い係数を使う。
+ */
+const FULL_WIDTH_RATIO = 2.2;
+
+/** 太字は通常より字幅が広がる。見出しに用いる */
+const BOLD_RATIO = 1.05;
+
+/**
+ * セルの表示幅を Excel の文字数単位で数える。
+ * セル内改行がある場合は最も長い行で測る。
+ */
+export function displayWidth(value: ExcelCell, bold = false): number {
+  if (value === null || value === undefined) return 0;
+  const width = String(value)
+    .split('\n')
+    .reduce((max, line) => {
+      let sum = 0;
+      for (const char of line) {
+        sum += FULL_WIDTH_CHAR.test(char) ? FULL_WIDTH_RATIO : 1;
+      }
+      return Math.max(max, sum);
+    }, 0);
+  return bold ? width * BOLD_RATIO : width;
+}
+
+/**
+ * 列幅を内容から決める。
+ *
+ * xlsx には「開いたときに自動調整せよ」という指定が無く、Excel の自動調整は
+ * 表示時に実測して決まる。そのため見出しと値の表示幅を測って列幅に充てる。
+ * 上段の見出しは結合されるため幅の対象にしない（Excel の自動調整も同じ）。
+ *
+ * オートフィルタを設定する表では、見出しにボタンが重なって文字が隠れるため、
+ * 見出しの幅にボタンぶんを上乗せする。
+ */
+function computeColumnWidths(
+  blocks: SheetBlock[],
+  offsets: number[],
+  withFilter: boolean,
+): Array<number | undefined> {
+  const widths: Array<number | undefined> = [];
+  const extend = (column: number, width: number) => {
+    const index = column - FIRST_COLUMN;
+    widths[index] = Math.max(widths[index] ?? 0, width);
+  };
+
+  const headerExtra = withFilter ? FILTER_BUTTON_WIDTH : 0;
+
+  blocks.forEach((block, blockIndex) => {
+    const offset = offsets[blockIndex] ?? FIRST_COLUMN;
+    block.columns.forEach((column, index) =>
+      // 見出しは太字で表示されるぶん幅を要する
+      extend(offset + index, displayWidth(column.header, true) + headerExtra),
+    );
+    for (const row of block.rows) {
+      row.forEach((value, index) =>
+        extend(offset + index, displayWidth(value)),
+      );
+    }
+  });
+
+  return widths.map((width) => {
+    // 表と表の間に挟まる列は幅を測る対象が無い
+    if (width === undefined) return undefined;
+    const clamped = Math.min(
+      Math.max(Math.ceil(width) + WIDTH_PADDING, MIN_WIDTH),
+      MAX_WIDTH,
+    );
+    // 既定値と同じ幅は記録されないため、わずかにずらして必ず反映させる
+    return clamped === EXCELJS_DEFAULT_WIDTH ? clamped + 0.1 : clamped;
+  });
 }
 
 /** 隣り合う同じ group をひとまとまりとして、結合する範囲を求める */
@@ -66,29 +160,19 @@ function hasGroupRow(columns: ColumnDef[]): boolean {
   return columns.some((column) => column.group !== undefined);
 }
 
-function writeTitle(ws: Worksheet, row: number, title: string) {
-  const cell = ws.getCell(row, FIRST_COLUMN);
-  cell.value = title;
-  cell.font = {
-    name: THEME.font.name,
-    size: THEME.font.titleSize,
-    bold: true,
-    color: { argb: THEME.color.titleText },
-  };
-}
-
 /** 見出しを書き、次に書き込む行番号を返す */
 function writeHeader(
   ws: Worksheet,
   startRow: number,
+  startColumn: number,
   columns: ColumnDef[],
 ): number {
   const twoTier = hasGroupRow(columns);
 
   if (twoTier) {
     groupSpans(columns).forEach(({ group, start, end }) => {
-      const from = FIRST_COLUMN + start;
-      const to = FIRST_COLUMN + end;
+      const from = startColumn + start;
+      const to = startColumn + end;
       // group を持たない列は上段を空のままにする
       if (group !== undefined) ws.getCell(startRow, from).value = group;
       if (to > from) ws.mergeCells(startRow, from, startRow, to);
@@ -109,7 +193,7 @@ function writeHeader(
 
   const headerRow = twoTier ? startRow + 1 : startRow;
   columns.forEach((column, index) => {
-    const cell = ws.getCell(headerRow, FIRST_COLUMN + index);
+    const cell = ws.getCell(headerRow, startColumn + index);
     cell.value = column.header;
     cell.font = {
       name: THEME.font.name,
@@ -119,28 +203,29 @@ function writeHeader(
     };
     cell.fill = solidFill(THEME.color.headerBg);
     cell.border = BORDER;
-    cell.alignment = {
-      horizontal: 'center',
-      vertical: 'middle',
-      wrapText: true,
-    };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
   });
 
   return headerRow + 1;
 }
 
 /** 明細行を書き、次に書き込む行番号を返す */
-function writeRows(ws: Worksheet, startRow: number, block: SheetBlock): number {
+function writeRows(
+  ws: Worksheet,
+  startRow: number,
+  startColumn: number,
+  block: SheetBlock,
+): number {
   block.rows.forEach((row, rowIndex) => {
     const target = startRow + rowIndex;
     const striped = rowIndex % 2 === 1;
     block.columns.forEach((_, columnIndex) => {
-      const cell = ws.getCell(target, FIRST_COLUMN + columnIndex);
+      const cell = ws.getCell(target, startColumn + columnIndex);
       const value = row[columnIndex];
       if (value !== undefined && value !== null) cell.value = value;
       cell.font = { name: THEME.font.name, size: THEME.font.size };
       cell.border = BORDER;
-      cell.alignment = { vertical: 'top', wrapText: true };
+      cell.alignment = { vertical: 'top' };
       if (striped) cell.fill = solidFill(THEME.color.stripeBg);
     });
   });
@@ -153,46 +238,47 @@ export function addStyledSheet(
   { blocks }: SheetResult,
 ) {
   const ws = wb.addWorksheet(name);
-  ws.getColumn(1).width = MARGIN_COLUMN_WIDTH;
+  // オートフィルタはシートに1つしか置けないため、表が1つのときだけ設定する
+  const withFilter = blocks.length === 1;
 
-  let row = FIRST_ROW;
-  let firstHeaderRow: number | undefined;
-  let firstBlock: SheetBlock | undefined;
+  // 表は横に並べる。縦に積むと列幅が表どうしで共有され、片方の長い値が
+  // もう片方の列まで広げてしまうため。
+  const offsets: number[] = [];
+  let nextColumn = FIRST_COLUMN;
+  for (const block of blocks) {
+    offsets.push(nextColumn);
+    nextColumn += block.columns.length + BLOCK_GAP_COLUMNS;
+  }
 
+  let headerHeight = 0;
   blocks.forEach((block, index) => {
-    if (index > 0) row += BLOCK_GAP;
-    if (block.title) {
-      writeTitle(ws, row, block.title);
-      row += 2;
-    }
-    const bodyStart = writeHeader(ws, row, block.columns);
-    if (index === 0) {
-      firstHeaderRow = bodyStart - 1;
-      firstBlock = block;
-    }
-    row = writeRows(ws, bodyStart, block);
+    const startColumn = offsets[index] ?? FIRST_COLUMN;
+    const bodyStart = writeHeader(ws, FIRST_ROW, startColumn, block.columns);
+    headerHeight = Math.max(headerHeight, bodyStart - FIRST_ROW);
+    writeRows(ws, bodyStart, startColumn, block);
   });
 
-  // 列幅は最も列数の多い表に合わせる
-  const widest = blocks.reduce<ColumnDef[]>(
-    (max, block) => (block.columns.length > max.length ? block.columns : max),
-    [],
-  );
-  widest.forEach((column, index) => {
-    ws.getColumn(FIRST_COLUMN + index).width = column.width;
+  computeColumnWidths(blocks, offsets, withFilter).forEach((width, index) => {
+    if (width === undefined) return;
+    ws.getColumn(FIRST_COLUMN + index).width = width;
+  });
+  // 表の間に挟まる列は区切りとして狭くする
+  offsets.slice(1).forEach((offset) => {
+    ws.getColumn(offset - BLOCK_GAP_COLUMNS).width = GAP_COLUMN_WIDTH;
   });
 
   // 見出しまでを固定する。2段見出しなら2行とも固定される
-  if (firstHeaderRow !== undefined) {
-    ws.views = [{ state: 'frozen', xSplit: 0, ySplit: firstHeaderRow }];
+  const freezeRow = FIRST_ROW + headerHeight - 1;
+  if (headerHeight > 0) {
+    ws.views = [{ state: 'frozen', xSplit: 0, ySplit: freezeRow }];
   }
 
-  // オートフィルタはシートに1つしか置けないため、表が1つのときだけ設定する
-  if (blocks.length === 1 && firstHeaderRow !== undefined && firstBlock) {
+  const firstBlock = blocks[0];
+  if (withFilter && firstBlock) {
     ws.autoFilter = {
-      from: { row: firstHeaderRow, column: FIRST_COLUMN },
+      from: { row: freezeRow, column: FIRST_COLUMN },
       to: {
-        row: firstHeaderRow + firstBlock.rows.length,
+        row: freezeRow + firstBlock.rows.length,
         column: FIRST_COLUMN + firstBlock.columns.length - 1,
       },
     };
