@@ -25,7 +25,8 @@ npm run format:check  # prettier --check .
 - スナップショットを意図的に更新する場合は `npx vitest run -u`。**出力仕様を変えたつもりが無いのに差分が出た場合は、更新せず原因を確認する。**
 - 拡張機能として動かす場合は `npm run build` 後、`chrome://extensions` で「パッケージ化されていない拡張機能を読み込む」から `dist/` を読み込む。
 - 拡張機能のバージョンは `public/manifest.json` の `version` が実体。`package.json` の `version` は使われていない。
-- `build` / `test` / `lint` / `format:check` / `audit` はいずれもエラー0の状態を維持している。lint エラーを残したまま次の作業に進まない。
+- `build` / `test` / `lint` / `format:check` はいずれもエラー0の状態を維持している。lint エラーを残したまま次の作業に進まない。
+- 脆弱性は `npm audit --omit=dev`（本番の依存）で 0 件を維持する。開発時だけ使う依存（lint・テスト・ビルドツール）の脆弱性は配布物に含まれないため、上流に修正版が無く `--force` で互換性が壊れる場合に限り残してよい。現在は typescript-eslint が依存する `minimatch` の moderate が残っている（最新の typescript-eslint でも未修正）。依存を更新するときに再確認する。
 
 ## アーキテクチャ
 
