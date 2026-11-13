@@ -290,20 +290,41 @@ describe('buildProcessSheet', () => {
     expect(blocks[1]?.columns.map((c) => c.header)).toContain('アクション名');
   });
 
-  it('作業者を1件ずつ行に展開する', () => {
+  it('ステータス1件を1行にし、作業者を種類:コードで並べる', () => {
     const block = result().blocks[0]!;
-    const rows = block.rows.filter((row) => row[1] === '未対応');
-    expect(rows.map((row) => [row[3], row[4], row[5]])).toEqual([
-      ['sales', 'GROUP', '■'],
-      ['user1', 'USER', '□'],
+    expect(block.rows).toEqual([
+      [1, '未対応', 'ONE', 'GROUP:sales(下位含む),USER:user1'],
+      [2, '確認中', 'ANY', 'ORGANIZATION:dev(下位含む),CREATOR'],
+      [3, '完了', 'ALL', ''],
     ]);
   });
 
-  it('作業者がいないステータスも1行出力する', () => {
-    const block = result().blocks[0]!;
-    const rows = block.rows.filter((row) => row[1] === '完了');
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.[3]).toBe('');
+  it('アクションを実行前ステータスの順に並べ、同じステータス内は設定順を保つ', () => {
+    const block = result().blocks[1]!;
+    expect(column(block, 'アクション名')).toEqual([
+      '対応する',
+      '完了にする',
+      '承認する',
+    ]);
+  });
+
+  it('実行前 → アクション名 → 実行後の順に列を置く', () => {
+    const block = result().blocks[1]!;
+    expect(block.columns.slice(0, 3).map((c) => c.header)).toEqual([
+      '実行前',
+      'アクション名',
+      '実行後',
+    ]);
+  });
+
+  it('分岐の2つ目以降だけが実行できるユーザーを持つ', () => {
+    const block = result().blocks[1]!;
+    expect(column(block, '種類')).toEqual(['PRIMARY', 'SECONDARY', 'PRIMARY']);
+    expect(column(block, '実行できるユーザー')).toEqual([
+      '-',
+      'USER:boss',
+      '-',
+    ]);
   });
 
   it('プロセス管理が無効でも表の構成は保つ', () => {
