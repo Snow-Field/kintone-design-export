@@ -27,9 +27,8 @@ const GAP_COLUMN_WIDTH = 2;
 const WIDTH_PADDING = 2;
 /** オートフィルタのボタンが見出しに重ならないよう確保する幅 */
 const FILTER_BUTTON_WIDTH = 3;
-/** 列幅の下限と、Excel が扱える上限 */
-const MIN_WIDTH = 3;
-const MAX_WIDTH = 255;
+/** Excel が扱える列幅の上限 */
+const EXCEL_MAX_WIDTH = 255;
 /**
  * ExcelJS の既定列幅。この値をそのまま指定すると「幅の指定なし」と見なされ
  * xlsx に記録されず、Excel 側の既定幅（9 より狭い）で表示されてしまう。
@@ -94,6 +93,7 @@ export function displayWidth(value: ExcelCell, bold = false): number {
  *
  * オートフィルタを設定する表では、見出しにボタンが重なって文字が隠れるため、
  * 見出しの幅にボタンぶんを上乗せする。
+ * 算出した幅は THEME.columnWidth の範囲に収める。
  */
 function computeColumnWidths(
   blocks: SheetBlock[],
@@ -101,6 +101,7 @@ function computeColumnWidths(
   withFilter: boolean,
 ): Array<number | undefined> {
   const widths: Array<number | undefined> = [];
+  const limits: Array<number | undefined> = [];
   const extend = (column: number, width: number) => {
     const index = column - FIRST_COLUMN;
     widths[index] = Math.max(widths[index] ?? 0, width);
@@ -110,10 +111,12 @@ function computeColumnWidths(
 
   blocks.forEach((block, blockIndex) => {
     const offset = offsets[blockIndex] ?? FIRST_COLUMN;
-    block.columns.forEach((column, index) =>
+    block.columns.forEach((column, index) => {
+      limits[offset + index - FIRST_COLUMN] =
+        column.maxWidth ?? THEME.columnWidth.max;
       // 見出しは太字で表示されるぶん幅を要する
-      extend(offset + index, displayWidth(column.header, true) + headerExtra),
-    );
+      extend(offset + index, displayWidth(column.header, true) + headerExtra);
+    });
     for (const row of block.rows) {
       row.forEach((value, index) =>
         extend(offset + index, displayWidth(value)),
@@ -121,12 +124,16 @@ function computeColumnWidths(
     }
   });
 
-  return widths.map((width) => {
+  return widths.map((width, index) => {
     // 表と表の間に挟まる列は幅を測る対象が無い
     if (width === undefined) return undefined;
+    const max = Math.min(
+      limits[index] ?? THEME.columnWidth.max,
+      EXCEL_MAX_WIDTH,
+    );
     const clamped = Math.min(
-      Math.max(Math.ceil(width) + WIDTH_PADDING, MIN_WIDTH),
-      MAX_WIDTH,
+      Math.max(Math.ceil(width) + WIDTH_PADDING, THEME.columnWidth.min),
+      max,
     );
     // 既定値と同じ幅は記録されないため、わずかにずらして必ず反映させる
     return clamped === EXCELJS_DEFAULT_WIDTH ? clamped + 0.1 : clamped;

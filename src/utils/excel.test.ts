@@ -51,6 +51,23 @@ const TWO_BLOCKS: SheetResult = {
   ],
 };
 
+const LONG_VALUES: SheetResult = {
+  blocks: [
+    {
+      columns: [{ header: 'ラベル' }, { header: '計算式', maxWidth: 80 }],
+      rows: [['x'.repeat(100), 'y'.repeat(100)]],
+    },
+  ],
+};
+
+// 表が2つあるとオートフィルタが付かず、見出しにボタンぶんの幅が足されない
+const NARROW: SheetResult = {
+  blocks: [
+    { columns: [{ header: 'a' }], rows: [['1']] },
+    { columns: [{ header: 'b' }], rows: [] },
+  ],
+};
+
 async function render(name: string, result: SheetResult): Promise<Worksheet> {
   const wb = createWorkbook();
   addStyledSheet(wb, name, result);
@@ -223,5 +240,23 @@ describe('addStyledSheet（表が2つ）', () => {
 
   it('表と表の間の列を狭くする', () => {
     expect(ws.getColumn(3).width).toBe(2);
+  });
+});
+
+describe('addStyledSheet（列幅の上限と下限）', () => {
+  it('上限を超える列幅を上限で打ち切る', async () => {
+    const ws = await render('long', LONG_VALUES);
+    expect(ws.getColumn(1).width).toBe(THEME.columnWidth.max);
+  });
+
+  it('maxWidth を指定した列はその値を上限にする', async () => {
+    const ws = await render('long', LONG_VALUES);
+    expect(ws.getColumn(2).width).toBe(80);
+  });
+
+  it('狭い列も下限まで広げる', async () => {
+    // 「a」= 1 × 1.05 → 切り上げ2 + 余白2 = 4 だが、下限で広げる
+    const ws = await render('narrow', NARROW);
+    expect(ws.getColumn(1).width).toBe(THEME.columnWidth.min);
   });
 });

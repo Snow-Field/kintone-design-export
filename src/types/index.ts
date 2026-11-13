@@ -14,6 +14,8 @@ export type ColumnDef = {
   group?: string;
   /** 下段の見出し */
   header: string;
+  /** 列幅の上限。省略時は THEME.columnWidth.max */
+  maxWidth?: number;
 };
 
 /**
