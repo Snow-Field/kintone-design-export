@@ -192,58 +192,46 @@ describe('buildFieldSheet', () => {
 describe('buildLookupSheet', () => {
   const block = () => firstBlock(buildLookupSheet(createMockAppSettings()));
 
-  it('コピー元とコピー先を別々の列に展開する', () => {
-    const rows = block().rows.filter(
-      (row) => row[4] === 'ほかのフィールドのコピー',
-    );
-    expect(rows.map((row) => [row[5], row[6]])).toEqual([
-      ['顧客住所', '住所'],
-      ['顧客電話番号', '電話番号'],
+  it('ルックアップ1件を1行にする', () => {
+    expect(block().rows).toHaveLength(1);
+  });
+
+  it('ほかのフィールドのコピーをコピー元 → コピー先で並べる', () => {
+    expect(column(block(), 'コピー元 → コピー先')).toEqual([
+      '住所 → 顧客住所,電話番号 → 顧客電話番号',
     ]);
   });
 
-  it('表示フィールドを1件ずつ行に展開する', () => {
-    const rows = block().rows.filter((row) => row[4] === '表示フィールド');
-    expect(rows.map((row) => row[6])).toEqual(['顧客コード', '顧客名']);
-  });
-
-  it('どの行にもルックアップ元の情報が入る', () => {
-    for (const value of column(block(), 'コピー元アプリコード')) {
-      expect(value).toBe('CUSTOMER');
-    }
+  it('選択時に表示するフィールドをカンマ区切りにする', () => {
+    expect(column(block(), '表示するフィールド')).toEqual([
+      '顧客コード,顧客名',
+    ]);
   });
 });
 
 describe('buildReferenceSheet', () => {
-  it('表示フィールドを1件ずつ行に展開する', () => {
+  it('関連レコード1件を1行にし、表示フィールドをカンマ区切りにする', () => {
     const block = firstBlock(buildReferenceSheet(createMockAppSettings()));
-    expect(block.rows.map((row) => row[5])).toEqual(['案件名', '金額']);
+    expect(block.rows).toHaveLength(1);
+    expect(column(block, '表示するフィールド')).toEqual(['案件名,金額']);
   });
 });
 
 describe('buildViewSheet', () => {
   const block = () => firstBlock(buildViewSheet(createMockAppSettings()));
 
-  it('一覧を index の昇順で並べる', () => {
-    expect([...new Set(column(block(), '一覧名'))]).toEqual([
-      '一覧',
-      'カレンダー',
-    ]);
+  it('一覧を index の昇順で1行ずつ並べる', () => {
+    expect(column(block(), '一覧名')).toEqual(['一覧', 'カレンダー']);
   });
 
-  it('表示フィールドを1件ずつ行に展開する', () => {
-    const rows = block().rows.filter((row) => row[0] === '一覧');
-    expect(rows.map((row) => row[4])).toEqual([
-      '案件名',
-      '金額',
-      'ステータス種別',
-    ]);
+  it('表示フィールドをカンマ区切りにする', () => {
+    expect(column(block(), '表示するフィールド')[0]).toBe(
+      '案件名,金額,ステータス種別',
+    );
   });
 
-  it('表示フィールドを持たない一覧種別でも1行は出力する', () => {
-    const rows = block().rows.filter((row) => row[0] === 'カレンダー');
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.[4]).toBe('');
+  it('表示フィールドを持たない一覧種別は - にする', () => {
+    expect(column(block(), '表示するフィールド')[1]).toBe('-');
   });
 });
 
