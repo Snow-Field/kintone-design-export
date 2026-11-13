@@ -57,24 +57,24 @@ src/app/popup/App.tsx  ──►  src/features/exportApp/content.ts
 - `rows` の各行は `columns` と同じ並び。表は A1 から始まるため、行の先頭に空文字を入れない。
 - `columns[].group` は上段の見出し。隣り合う列で同じ値なら結合される。1 列でも `group` があれば見出しは 2 段になる。
 - 見出し行は自動で固定される。表が 1 つだけのシートにはオートフィルタも設定される（Excel の仕様上シートあたり 1 つまでのため、表が複数のシートには付かない）。
-- **列幅は指定しない。** 見出しと値の表示幅から `computeColumnWidths` が自動で決める。xlsx には「開いたときに自動調整せよ」という指定が無いため、Excel の列幅自動調整に相当する結果をこちらで計算している。全角は `FULL_WIDTH_RATIO`、見出しの太字は `BOLD_RATIO` で見積もり、オートフィルタが付く表にはボタンぶんの幅を足す。**幅が ExcelJS の既定値 9 と一致すると xlsx に記録されず既定幅（9 より狭い）で表示されるため、9 は避けている。**
+- **列幅は指定しない。** 見出しと値の表示幅から `computeColumnWidths` が自動で決める。xlsx には「開いたときに自動調整せよ」という指定が無いため、Excel の列幅自動調整に相当する結果をこちらで計算している。全角は `FULL_WIDTH_RATIO`、見出しの太字は `BOLD_RATIO` で見積もり、オートフィルタが付く表にはボタンぶんの幅を足す。**幅が ExcelJS の既定値 9 と一致すると xlsx に記録されず既定幅（9 より狭い）で表示されるため、9 は避けている。**算出した幅は `THEME.columnWidth`（`src/utils/theme.ts`）の上限・下限に収める。上限を変えたい列だけ `ColumnDef.maxWidth` を指定する。上限を超える値はセルの端で切れる（D-09）。
 - **表が複数あるシートでは表を横に並べる**（`BLOCK_GAP_COLUMNS` 列を空ける）。縦に積むと列幅が表どうしで共有され、片方の長い値がもう片方の列まで広げてしまうため。
 
 値の整形は既存シートの表記に合わせる:
 
-- 真偽値は `■` / `□`（`src/utils/format.ts` の `checkMark`）。未設定と `false` を区別したい列は、未設定なら空文字にする。
+- 真偽値は `■` / `□`（`src/utils/format.ts` の `checkMark`）。`■` のセルには `addStyledSheet` が背景色を付ける。行の種類（フィールドの型など）にそもそも存在しない項目は `NOT_APPLICABLE`（`-`）、存在するが未設定の項目は空文字にする（D-10）。
 - kintone REST API の値は**日本語に変換せずそのまま出す**（`SINGLE_LINE_TEXT`、`AFTER`、`GROUP` など）。理由は `docs/ai/decisions/excel-output.md` の D-04。
-- 1 対多の紐づけ（マッピング・表示フィールドなど）は**行方向に展開**し、対応元と対応先を別の列に置く（D-02）。単一フィールドが複数値を持つだけの属性（選択肢・対象ユーザー）は列内でカンマ区切り（D-03）。
+- **1つの設定を1行で表す**（D-08）。複数の値は `joinValues` でカンマ区切りにし、組は `formatMapping`（`元 → 先`）、ユーザー・グループ・組織は `formatEntity`（`種類:コード`）で書く。例外はレコード・フィールドのアクセス権で、対象ごとに権限が異なるため1行1対象とする。
 
 ### 新しいシートを追加する手順
 
 1. `src/utils/excel.ts` の `SHEET_NAMES` にシート名を追加
-2. `sheetBuilders/` に `buildXxxSheet(data: AppSettings): SheetResult` を作成（`columns` に見出しと幅を定義する）
+2. `sheetBuilders/` に `buildXxxSheet(data: AppSettings): SheetResult` を作成（`columns` に見出しを定義する。幅は自動）
 3. `sheetBuilders/index.ts` で re-export
 4. `content.ts` の `sheetDefinitions` に `{ name, builder }` を登録（この配列の順序＝シートの並び順）
 5. `sheetBuilders.test.ts` の `builders` 配列に追加し、`npm test` でスナップショットを生成する
 
-### 配色を変える
+### 配色・列幅を変える
 
 `src/utils/theme.ts` の値だけを差し替える。色は ARGB 8 桁。**見出しの背景色を変えるときは文字色とのコントラスト比を 4.5:1 以上に保つこと**（現在の値と根拠は `docs/specs/excel-layout.md`）。
 
