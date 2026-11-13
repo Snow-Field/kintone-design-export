@@ -136,8 +136,27 @@ describe('buildFieldSheet', () => {
     expect(valueOf('案件名', 'ラベル表示')).toBe('■');
   });
 
-  it('未設定の真偽値は空欄にする', () => {
-    expect(valueOf('案件名', '桁区切り')).toBe('');
+  it('型に存在しない属性は - にする', () => {
+    expect(valueOf('金額', '最大長')).toBe('-');
+    expect(valueOf('案件名', '桁区切り')).toBe('-');
+    // 計算フィールドは重複禁止を持たない
+    expect(valueOf('税込金額', '重複禁止')).toBe('-');
+    expect(valueOf('担当者', '選択肢')).toBe('-');
+  });
+
+  it('型に存在するが未設定の属性は空欄にする', () => {
+    expect(valueOf('顧客名', '最大長')).toBe('');
+    expect(valueOf('案件名', 'デフォルト値')).toBe('');
+  });
+
+  it('ラベルやグループの行は属性列をすべて - にする', () => {
+    const b = block();
+    const start = b.columns.findIndex((c) => c.group === '入力制約');
+    for (const code of ['補足情報', '社内情報']) {
+      const row = b.rows.find((r) => r[1] === code) ?? [];
+      expect(row).toHaveLength(b.columns.length);
+      expect(new Set(row.slice(start))).toEqual(new Set(['-']));
+    }
   });
 
   it('対象ユーザーをカンマ区切りにする', () => {

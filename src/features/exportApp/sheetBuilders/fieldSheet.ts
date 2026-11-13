@@ -4,7 +4,7 @@ import type {
 } from '@kintone/rest-api-client';
 import type { ColumnDef, ExcelData, SheetResult, AppSettings } from '@/types';
 import { getFieldProp } from '@/utils/field';
-import { checkMark, joinValues } from '@/utils/format';
+import { checkMark, joinValues, NOT_APPLICABLE } from '@/utils/format';
 
 /** フィールドプロパティの型エイリアス */
 type FieldProperty = KintoneFormFieldProperty.OneOf;
@@ -59,6 +59,14 @@ const COLUMNS: ColumnDef[] = [
   { group: '表示', header: 'グループ初期表示' },
   { group: '表示', header: '機能の有効' },
 ];
+
+/** 属性列の開始位置。これより左は行の種類を問わず値を持つ基本情報 */
+const ATTRIBUTE_START = COLUMNS.findIndex((c) => c.group === '入力制約');
+
+/** 属性を持たない行（ラベル・グループなど）の属性列 */
+function noAttributes(): string[] {
+  return Array<string>(COLUMNS.length - ATTRIBUTE_START).fill(NOT_APPLICABLE);
+}
 
 /**
  * レイアウト項目に対応するフィールドプロパティを取得する。
@@ -124,7 +132,7 @@ function flattenLayout(data: AppSettings): LayoutItem[] {
 function optionLabels(field: FieldProperty): string {
   const options = getFieldProp(field, 'options') as
     Record<string, { label: string; index: string }> | undefined;
-  if (!options) return '';
+  if (!options) return NOT_APPLICABLE;
   return joinValues(
     Object.values(options)
       .toSorted((a, b) => Number(a.index) - Number(b.index))
@@ -135,7 +143,7 @@ function optionLabels(field: FieldProperty): string {
 /** 選択肢に指定されたユーザー・グループ・組織のコード */
 function entityCodes(field: FieldProperty): string {
   const entities = getFieldProp(field, 'entities');
-  if (!Array.isArray(entities)) return '';
+  if (!Array.isArray(entities)) return NOT_APPLICABLE;
   return joinValues(
     (entities as Array<{ code: string }>).map((entity) => entity.code),
   );
@@ -144,7 +152,8 @@ function entityCodes(field: FieldProperty): string {
 /** デフォルト値。ユーザー選択などは配列で返るためコードを連結する */
 function defaultValue(field: FieldProperty): string {
   const value = getFieldProp(field, 'defaultValue');
-  if (value === undefined || value === null || value === '') return '';
+  if (value === undefined) return NOT_APPLICABLE;
+  if (value === null || value === '') return '';
   if (!Array.isArray(value)) return String(value);
   return joinValues(
     value.map((v) =>
@@ -155,9 +164,30 @@ function defaultValue(field: FieldProperty): string {
   );
 }
 
-/** 値を持つ場合だけ文字列にする。未設定と false を区別したい列で使う */
-function optional(value: unknown): string {
-  return value === undefined || value === null ? '' : String(value);
+/** 属性を文字列にする。型に存在しない属性は -、未設定は空欄 */
+function attr(field: FieldProperty, key: string): string {
+  const value = getFieldProp(field, key);
+  if (value === undefined) return NOT_APPLICABLE;
+  return value === null ? '' : String(value);
+}
+
+/** 真偽値の属性をチェック記号にする。invert は「〜しない」を表す属性に使う */
+function flag(field: FieldProperty, key: string, invert = false): string {
+  const value = getFieldProp(field, key);
+  if (value === undefined) return NOT_APPLICABLE;
+  return checkMark(invert ? !value : value);
+}
+
+/** 真偽値の属性を2択の語にする */
+function choice(
+  field: FieldProperty,
+  key: string,
+  on: string,
+  off: string,
+): string {
+  const value = getFieldProp(field, key);
+  if (value === undefined) return NOT_APPLICABLE;
+  return value ? on : off;
 }
 
 export function buildFieldSheet(data: AppSettings): SheetResult {
@@ -167,7 +197,7 @@ export function buildFieldSheet(data: AppSettings): SheetResult {
     if (l.type === 'LABEL' || l.type === 'SPACER' || l.type === 'HR') {
       const label =
         ('elementId' in l && l.elementId) || ('label' in l && l.label) || '';
-      rows.push([index, label, '', l.type]);
+      rows.push([index, label, '', l.type, '', '', ...noAttributes()]);
       return;
     }
 
@@ -180,18 +210,13 @@ export function buildFieldSheet(data: AppSettings): SheetResult {
         isTable ? 'SUBTABLE' : 'GROUP',
         isTable ? (l.tableName ?? '') : '',
         isTable ? '' : (l.groupName ?? ''),
+        ...noAttributes(),
       ]);
       return;
     }
 
     const f = resolveFieldProperty(data, l);
     if (!f) return;
-
-    const hideExpression = getFieldProp(f, 'hideExpression');
-    const digit = getFieldProp(f, 'digit');
-    const openGroup = getFieldProp(f, 'openGroup');
-    const enabled = getFieldProp(f, 'enabled');
-    const noLabel = getFieldProp(f, 'noLabel');
 
     rows.push([
       index,
@@ -200,28 +225,30 @@ export function buildFieldSheet(data: AppSettings): SheetResult {
       f.type,
       l.table ? (l.tableName ?? '') : '',
       l.group ? (l.groupName ?? '') : '',
-      getFieldProp(f, 'required') ? '必須' : '任意',
-      getFieldProp(f, 'unique') ? '禁止' : '許可',
-      optional(getFieldProp(f, 'maxLength')),
-      optional(getFieldProp(f, 'minLength')),
-      optional(getFieldProp(f, 'maxValue')),
-      optional(getFieldProp(f, 'minValue')),
+      choice(f, 'required', '必須', '任意'),
+      choice(f, 'unique', '禁止', '許可'),
+      attr(f, 'maxLength'),
+      attr(f, 'minLength'),
+      attr(f, 'maxValue'),
+      attr(f, 'minValue'),
       defaultValue(f),
       optionLabels(f),
-      optional(getFieldProp(f, 'align')),
+      attr(f, 'align'),
       entityCodes(f),
-      optional(getFieldProp(f, 'expression')),
-      hideExpression === undefined ? '' : checkMark(!hideExpression),
-      optional(getFieldProp(f, 'format')),
-      optional(getFieldProp(f, 'displayScale')),
-      optional(getFieldProp(f, 'unit')),
-      optional(getFieldProp(f, 'unitPosition')),
-      digit === undefined ? '' : checkMark(digit),
-      checkMark(!noLabel),
-      optional(getFieldProp(f, 'protocol')),
-      optional(getFieldProp(f, 'thumbnailSize')),
-      openGroup === undefined ? '' : checkMark(openGroup),
-      enabled === undefined ? '' : checkMark(enabled),
+      attr(f, 'expression'),
+      // 「計算式を表示」は API では「隠す」で返る
+      flag(f, 'hideExpression', true),
+      attr(f, 'format'),
+      attr(f, 'displayScale'),
+      attr(f, 'unit'),
+      attr(f, 'unitPosition'),
+      flag(f, 'digit'),
+      // 「ラベル表示」は API では「表示しない」で返る
+      flag(f, 'noLabel', true),
+      attr(f, 'protocol'),
+      attr(f, 'thumbnailSize'),
+      flag(f, 'openGroup'),
+      flag(f, 'enabled'),
     ]);
   });
 
