@@ -1,5 +1,6 @@
 import { Workbook, type Borders, type Fill, type Worksheet } from 'exceljs';
 import type { ColumnDef, ExcelCell, SheetBlock, SheetResult } from '@/types';
+import { CHECK_ON } from './format';
 import { THEME } from './theme';
 
 export const SHEET_NAMES = {
@@ -233,7 +234,8 @@ function writeRows(
       cell.font = { name: THEME.font.name, size: THEME.font.size };
       cell.border = BORDER;
       cell.alignment = { vertical: 'top' };
-      if (striped) cell.fill = solidFill(THEME.color.stripeBg);
+      if (value === CHECK_ON) cell.fill = solidFill(THEME.color.checkedBg);
+      else if (striped) cell.fill = solidFill(THEME.color.stripeBg);
     });
   });
   return startRow + block.rows.length;

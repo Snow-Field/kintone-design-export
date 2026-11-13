@@ -165,6 +165,19 @@ describe('addStyledSheet（2段見出し）', () => {
     });
   });
 
+  it('有効（■）のセルに背景色を付け、偶数行の縞より優先する', () => {
+    expect(ws.getCell('C3').fill).toMatchObject({
+      fgColor: { argb: THEME.color.checkedBg },
+    });
+    expect(ws.getCell('C5').fill).toMatchObject({
+      fgColor: { argb: THEME.color.checkedBg },
+    });
+    // 無効（□）のセルは通常の縞のまま
+    expect(ws.getCell('C4').fill).toMatchObject({
+      fgColor: { argb: THEME.color.stripeBg },
+    });
+  });
+
   it('折り返して全体を表示しない', () => {
     expect(ws.getCell('A2').alignment?.wrapText).toBeFalsy();
     expect(ws.getCell('D4').alignment?.wrapText).toBeFalsy();

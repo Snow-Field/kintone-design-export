@@ -22,6 +22,8 @@ export const THEME = {
     headerText: 'FFFFFFFF',
     /** 偶数行の背景 */
     stripeBg: 'FFF2F7FC',
+    /** 有効（■）のセルの背景。黒文字と 14.7:1、偶数行の背景と明るさで 1.32:1 の差 */
+    checkedBg: 'FFC6E0B4',
     /** 罫線 */
     border: 'FFBFCBD9',
   },
