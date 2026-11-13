@@ -238,22 +238,19 @@ describe('buildViewSheet', () => {
 describe('buildActionSheet', () => {
   const block = () => firstBlock(buildActionSheet(createMockAppSettings()));
 
-  it('関連付けと利用者を行数の多い方に合わせて展開する', () => {
-    expect(block().rows).toHaveLength(2);
+  it('アクション1件を1行にする', () => {
+    expect(block().rows).toHaveLength(1);
   });
 
-  it('関連付けの種別とコピー元・コピー先を列に分ける', () => {
-    expect(block().rows.map((row) => [row[5], row[6], row[7]])).toEqual([
-      ['FIELD', '案件名', '案件名'],
-      ['RECORD_URL', '', '参照元'],
+  it('フィールドの関連付けをコピー元 → コピー先で並べる', () => {
+    // レコード URL はフィールドではないため種別をそのまま書く
+    expect(column(block(), 'コピー元 → コピー先')).toEqual([
+      '案件名 → 案件名,RECORD_URL → 参照元',
     ]);
   });
 
-  it('利用者のコードと種類を列に分ける', () => {
-    expect(block().rows.map((row) => [row[8], row[9]])).toEqual([
-      ['sales', 'GROUP'],
-      ['user1', 'USER'],
-    ]);
+  it('実行できる利用者を種類:コードで並べる', () => {
+    expect(column(block(), '利用者')).toEqual(['GROUP:sales,USER:user1']);
   });
 });
 
