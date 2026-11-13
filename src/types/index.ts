@@ -14,6 +14,8 @@ export type ColumnDef = {
   group?: string;
   /** 下段の見出し */
   header: string;
+  /** 列幅の上限。省略時は THEME.columnWidth.max */
+  maxWidth?: number;
 };
 
 /**
@@ -37,6 +39,12 @@ export type AppLocation = {
   guestSpaceId?: string;
 };
 
+/** 作業者・実行ユーザーとして指定されたユーザーなど。作成者（CREATOR）はコードを持たない */
+export type StatusEntity = {
+  entity: { type: string; code: string | null };
+  includeSubs: boolean;
+};
+
 export type AppStatusResponse = {
   enable: boolean;
   states?: Record<
@@ -46,10 +54,7 @@ export type AppStatusResponse = {
       index: string;
       assignee?: {
         type: 'ONE' | 'ALL' | 'ANY';
-        entities: Array<{
-          entity: { type: string; code: string };
-          includeSubs: boolean;
-        }>;
+        entities: StatusEntity[];
       };
     }
   >;
@@ -58,6 +63,9 @@ export type AppStatusResponse = {
     from: string;
     to: string;
     filterCond: string;
+    /** 分岐の2つ目以降が SECONDARY。SECONDARY だけが実行ユーザーを持つ */
+    type: 'PRIMARY' | 'SECONDARY';
+    executableUser?: { entities: StatusEntity[] };
   }>;
 };
 

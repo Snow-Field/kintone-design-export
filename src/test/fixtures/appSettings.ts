@@ -105,6 +105,12 @@ export function createMockAppSettings(): AppSettings {
           label: '顧客名',
           noLabel: false,
           required: false,
+          unique: false,
+          maxLength: '',
+          minLength: '',
+          defaultValue: '',
+          expression: '',
+          hideExpression: false,
           lookup: {
             relatedApp: { app: '200', code: 'CUSTOMER' },
             relatedKeyField: '顧客コード',
@@ -163,6 +169,11 @@ export function createMockAppSettings(): AppSettings {
               noLabel: false,
               required: true,
               defaultValue: '',
+              unique: false,
+              maxLength: '',
+              minLength: '',
+              expression: '',
+              hideExpression: false,
             },
             数量: {
               type: 'NUMBER',
@@ -172,6 +183,12 @@ export function createMockAppSettings(): AppSettings {
               required: false,
               defaultValue: '1',
               digit: false,
+              unique: false,
+              maxValue: '',
+              minValue: '',
+              displayScale: '',
+              unit: '',
+              unitPosition: 'BEFORE',
             },
           },
         },
@@ -374,18 +391,59 @@ export function createMockAppSettings(): AppSettings {
             ],
           },
         },
+        確認中: {
+          name: '確認中',
+          index: '1',
+          assignee: {
+            type: 'ANY',
+            entities: [
+              {
+                entity: { type: 'ORGANIZATION', code: 'dev' },
+                includeSubs: true,
+              },
+              {
+                entity: { type: 'CREATOR', code: null },
+                includeSubs: false,
+              },
+            ],
+          },
+        },
         完了: {
           name: '完了',
-          index: '1',
+          index: '2',
           assignee: { type: 'ALL', entities: [] },
         },
       },
+      // 実行前ステータスの順に並べ替えられることを検証するため、順序を崩して定義する
       actions: [
+        {
+          name: '承認する',
+          from: '確認中',
+          to: '完了',
+          filterCond: '',
+          type: 'PRIMARY',
+        },
         {
           name: '対応する',
           from: '未対応',
-          to: '完了',
+          to: '確認中',
           filterCond: '金額 > "0"',
+          type: 'PRIMARY',
+        },
+        {
+          name: '完了にする',
+          from: '未対応',
+          to: '完了',
+          filterCond: '',
+          type: 'SECONDARY',
+          executableUser: {
+            entities: [
+              {
+                entity: { type: 'USER', code: 'boss' },
+                includeSubs: false,
+              },
+            ],
+          },
         },
       ],
     },

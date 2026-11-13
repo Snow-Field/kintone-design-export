@@ -1,5 +1,5 @@
 /**
- * Excel 設計書の配色とフォント。
+ * Excel 設計書の配色・フォント・列幅。
  *
  * 見た目を変えたいときはこのファイルの値だけを差し替える。
  * 色は ExcelJS の書式に合わせて ARGB（先頭2桁は不透明度）で指定する。
@@ -22,7 +22,18 @@ export const THEME = {
     headerText: 'FFFFFFFF',
     /** 偶数行の背景 */
     stripeBg: 'FFF2F7FC',
+    /** 有効（■）のセルの背景。黒文字と 14.7:1、偶数行の背景と明るさで 1.32:1 の差 */
+    checkedBg: 'FFC6E0B4',
     /** 罫線 */
     border: 'FFBFCBD9',
+  },
+  /**
+   * 列幅（Excel の文字数単位）の範囲。値の表示幅から算出した列幅をこの範囲に収める。
+   * 上限を超える値はセルの端で切れる。特定の列だけ上限を変えたい場合は
+   * シートビルダーの ColumnDef.maxWidth で上書きする。
+   */
+  columnWidth: {
+    min: 6,
+    max: 50,
   },
 } as const;

@@ -124,6 +124,12 @@ describe('buildFieldSheet', () => {
     expect(valueOf('案件名', '計算式')).toBe('');
   });
 
+  it('計算式を表示は計算式が無ければ空欄にする', () => {
+    expect(valueOf('案件名', '計算式を表示')).toBe('');
+    expect(valueOf('税込金額', '計算式を表示')).toBe('■');
+    expect(valueOf('金額', '計算式を表示')).toBe('-');
+  });
+
   it('単位と単位の位置を分けて出力する', () => {
     expect(valueOf('金額', '単位')).toBe('円');
     expect(valueOf('金額', '単位の位置')).toBe('AFTER');
@@ -136,12 +142,31 @@ describe('buildFieldSheet', () => {
     expect(valueOf('案件名', 'ラベル表示')).toBe('■');
   });
 
-  it('未設定の真偽値は空欄にする', () => {
-    expect(valueOf('案件名', '桁区切り')).toBe('');
+  it('型に存在しない属性は - にする', () => {
+    expect(valueOf('金額', '最大長')).toBe('-');
+    expect(valueOf('案件名', '桁区切り')).toBe('-');
+    // 計算フィールドは重複禁止を持たない
+    expect(valueOf('税込金額', '重複禁止')).toBe('-');
+    expect(valueOf('担当者', '選択肢')).toBe('-');
   });
 
-  it('対象ユーザーをカンマ区切りにする', () => {
-    expect(valueOf('担当者', '対象ユーザー')).toBe('sales,user1');
+  it('型に存在するが未設定の属性は空欄にする', () => {
+    expect(valueOf('顧客名', '最大長')).toBe('');
+    expect(valueOf('案件名', 'デフォルト値')).toBe('');
+  });
+
+  it('ラベルやグループの行は属性列をすべて - にする', () => {
+    const b = block();
+    const start = b.columns.findIndex((c) => c.group === '入力制約');
+    for (const code of ['補足情報', '社内情報']) {
+      const row = b.rows.find((r) => r[1] === code) ?? [];
+      expect(row).toHaveLength(b.columns.length);
+      expect(new Set(row.slice(start))).toEqual(new Set(['-']));
+    }
+  });
+
+  it('対象ユーザーを種類:コードのカンマ区切りにする', () => {
+    expect(valueOf('担当者', '対象ユーザー')).toBe('GROUP:sales,USER:user1');
   });
 
   it('配列のデフォルト値をコードの連結にする', () => {
@@ -173,80 +198,65 @@ describe('buildFieldSheet', () => {
 describe('buildLookupSheet', () => {
   const block = () => firstBlock(buildLookupSheet(createMockAppSettings()));
 
-  it('コピー元とコピー先を別々の列に展開する', () => {
-    const rows = block().rows.filter(
-      (row) => row[4] === 'ほかのフィールドのコピー',
-    );
-    expect(rows.map((row) => [row[5], row[6]])).toEqual([
-      ['顧客住所', '住所'],
-      ['顧客電話番号', '電話番号'],
+  it('ルックアップ1件を1行にする', () => {
+    expect(block().rows).toHaveLength(1);
+  });
+
+  it('ほかのフィールドのコピーをコピー元 → コピー先で並べる', () => {
+    expect(column(block(), 'コピー元 → コピー先')).toEqual([
+      '住所 → 顧客住所,電話番号 → 顧客電話番号',
     ]);
   });
 
-  it('表示フィールドを1件ずつ行に展開する', () => {
-    const rows = block().rows.filter((row) => row[4] === '表示フィールド');
-    expect(rows.map((row) => row[6])).toEqual(['顧客コード', '顧客名']);
-  });
-
-  it('どの行にもルックアップ元の情報が入る', () => {
-    for (const value of column(block(), 'コピー元アプリコード')) {
-      expect(value).toBe('CUSTOMER');
-    }
+  it('選択時に表示するフィールドをカンマ区切りにする', () => {
+    expect(column(block(), '表示するフィールド')).toEqual([
+      '顧客コード,顧客名',
+    ]);
   });
 });
 
 describe('buildReferenceSheet', () => {
-  it('表示フィールドを1件ずつ行に展開する', () => {
+  it('関連レコード1件を1行にし、表示フィールドをカンマ区切りにする', () => {
     const block = firstBlock(buildReferenceSheet(createMockAppSettings()));
-    expect(block.rows.map((row) => row[5])).toEqual(['案件名', '金額']);
+    expect(block.rows).toHaveLength(1);
+    expect(column(block, '表示するフィールド')).toEqual(['案件名,金額']);
   });
 });
 
 describe('buildViewSheet', () => {
   const block = () => firstBlock(buildViewSheet(createMockAppSettings()));
 
-  it('一覧を index の昇順で並べる', () => {
-    expect([...new Set(column(block(), '一覧名'))]).toEqual([
-      '一覧',
-      'カレンダー',
-    ]);
+  it('一覧を index の昇順で1行ずつ並べる', () => {
+    expect(column(block(), '一覧名')).toEqual(['一覧', 'カレンダー']);
   });
 
-  it('表示フィールドを1件ずつ行に展開する', () => {
-    const rows = block().rows.filter((row) => row[0] === '一覧');
-    expect(rows.map((row) => row[4])).toEqual([
-      '案件名',
-      '金額',
-      'ステータス種別',
-    ]);
+  it('表示フィールドをカンマ区切りにする', () => {
+    expect(column(block(), '表示するフィールド')[0]).toBe(
+      '案件名,金額,ステータス種別',
+    );
   });
 
-  it('表示フィールドを持たない一覧種別でも1行は出力する', () => {
-    const rows = block().rows.filter((row) => row[0] === 'カレンダー');
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.[4]).toBe('');
+  it('表示フィールドを持たない一覧種別は - にする', () => {
+    expect(column(block(), '表示するフィールド')[1]).toBe('-');
   });
 });
 
 describe('buildActionSheet', () => {
   const block = () => firstBlock(buildActionSheet(createMockAppSettings()));
 
-  it('関連付けと利用者を行数の多い方に合わせて展開する', () => {
-    expect(block().rows).toHaveLength(2);
+  it('アクション1件を1行にする', () => {
+    expect(block().rows).toHaveLength(1);
   });
 
-  it('関連付けの種別とコピー元・コピー先を列に分ける', () => {
-    expect(block().rows.map((row) => [row[5], row[6], row[7]])).toEqual([
-      ['FIELD', '案件名', '案件名'],
-      ['RECORD_URL', '', '参照元'],
+  it('フィールドの関連付けをコピー元 → コピー先で並べる', () => {
+    // レコード URL はフィールドではないため種別をそのまま書く
+    expect(column(block(), 'コピー元 → コピー先')).toEqual([
+      '案件名 → 案件名,RECORD_URL → 参照元',
     ]);
   });
 
-  it('利用者のコードと種類を列に分ける', () => {
-    expect(block().rows.map((row) => [row[8], row[9]])).toEqual([
-      ['sales', 'GROUP'],
-      ['user1', 'USER'],
-    ]);
+  it('実行できる利用者を種類:コードで並べる', () => {
+    expect(column(block(), '利用者')).toEqual(['GROUP:sales,USER:user1']);
   });
 });
 
@@ -286,20 +296,41 @@ describe('buildProcessSheet', () => {
     expect(blocks[1]?.columns.map((c) => c.header)).toContain('アクション名');
   });
 
-  it('作業者を1件ずつ行に展開する', () => {
+  it('ステータス1件を1行にし、作業者を種類:コードで並べる', () => {
     const block = result().blocks[0]!;
-    const rows = block.rows.filter((row) => row[1] === '未対応');
-    expect(rows.map((row) => [row[3], row[4], row[5]])).toEqual([
-      ['sales', 'GROUP', '■'],
-      ['user1', 'USER', '□'],
+    expect(block.rows).toEqual([
+      [1, '未対応', 'ONE', 'GROUP:sales(下位含む),USER:user1'],
+      [2, '確認中', 'ANY', 'ORGANIZATION:dev(下位含む),CREATOR'],
+      [3, '完了', 'ALL', ''],
     ]);
   });
 
-  it('作業者がいないステータスも1行出力する', () => {
-    const block = result().blocks[0]!;
-    const rows = block.rows.filter((row) => row[1] === '完了');
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.[3]).toBe('');
+  it('アクションを実行前ステータスの順に並べ、同じステータス内は設定順を保つ', () => {
+    const block = result().blocks[1]!;
+    expect(column(block, 'アクション名')).toEqual([
+      '対応する',
+      '完了にする',
+      '承認する',
+    ]);
+  });
+
+  it('実行前 → アクション名 → 実行後の順に列を置く', () => {
+    const block = result().blocks[1]!;
+    expect(block.columns.slice(0, 3).map((c) => c.header)).toEqual([
+      '実行前',
+      'アクション名',
+      '実行後',
+    ]);
+  });
+
+  it('分岐の2つ目以降だけが実行できるユーザーを持つ', () => {
+    const block = result().blocks[1]!;
+    expect(column(block, '種類')).toEqual(['PRIMARY', 'SECONDARY', 'PRIMARY']);
+    expect(column(block, '実行できるユーザー')).toEqual([
+      '-',
+      'USER:boss',
+      '-',
+    ]);
   });
 
   it('プロセス管理が無効でも表の構成は保つ', () => {
