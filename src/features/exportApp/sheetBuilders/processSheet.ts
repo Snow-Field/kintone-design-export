@@ -1,4 +1,10 @@
-import type { ColumnDef, ExcelData, SheetResult, AppSettings } from '@/types';
+import type {
+  ColumnDef,
+  ExcelData,
+  SheetResult,
+  AppSettings,
+  StatusEntity,
+} from '@/types';
 import { formatEntity, joinValues, NOT_APPLICABLE } from '@/utils/format';
 
 const STATUS_COLUMNS: ColumnDef[] = [
@@ -17,12 +23,7 @@ const ACTION_COLUMNS: ColumnDef[] = [
   { group: '実行できる条件', header: '条件' },
 ];
 
-type StatusEntities = Array<{
-  entity: { type: string; code: string | null };
-  includeSubs: boolean;
-}>;
-
-function formatEntities(entities: StatusEntities): string {
+function formatEntities(entities: StatusEntity[]): string {
   return joinValues(entities.map((e) => formatEntity(e.entity, e.includeSubs)));
 }
 

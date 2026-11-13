@@ -40,7 +40,7 @@ export type AppLocation = {
 };
 
 /** 作業者・実行ユーザーとして指定されたユーザーなど。作成者（CREATOR）はコードを持たない */
-type StatusEntity = {
+export type StatusEntity = {
   entity: { type: string; code: string | null };
   includeSubs: boolean;
 };
