@@ -14,3 +14,23 @@ export function checkMark(value: unknown): string {
 export function joinValues(values: readonly string[]): string {
   return values.join(',');
 }
+
+/** 下位組織にも適用することを示す添え字 */
+const INCLUDE_SUBS_SUFFIX = '(下位含む)';
+
+/**
+ * ユーザー・グループ・組織などを `種類:コード` で表す。
+ * コードを持たない作成者（CREATOR）は種類だけを書く。
+ */
+export function formatEntity(
+  entity: { type: string; code: string | null },
+  includeSubs = false,
+): string {
+  const base = entity.code ? `${entity.type}:${entity.code}` : entity.type;
+  return includeSubs ? `${base}${INCLUDE_SUBS_SUFFIX}` : base;
+}
+
+/** 対応元と対応先の組を `元 → 先` で表す */
+export function formatMapping(src: string, dest: string): string {
+  return `${src} → ${dest}`;
+}
